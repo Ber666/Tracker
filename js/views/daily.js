@@ -12,6 +12,7 @@ const DailyView = {
   timelineStartHour: 6,
   timelineEndHour: 23,
   editors: {},
+  _drawCleanup: null,
 
   init() {
     this.initEditors();
@@ -120,6 +121,27 @@ const DailyView = {
     if (shiftReasonEl) {
       shiftReasonEl.addEventListener('input', Utils.debounce(() => this.autoSave(), 1000));
     }
+
+    // Drop zone: drag planned task → copy to actual section
+    const actualContainer = document.getElementById('unplanned-tasks');
+    actualContainer.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types.includes('application/x-planned-task-id')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        actualContainer.classList.add('drop-target-active');
+      }
+    });
+    actualContainer.addEventListener('dragleave', (e) => {
+      if (!actualContainer.contains(e.relatedTarget)) {
+        actualContainer.classList.remove('drop-target-active');
+      }
+    });
+    actualContainer.addEventListener('drop', (e) => {
+      e.preventDefault();
+      actualContainer.classList.remove('drop-target-active');
+      const taskId = e.dataTransfer.getData('application/x-planned-task-id');
+      if (taskId) this.copyPlannedToActual(taskId);
+    });
   },
 
   initRatingInputs() {
@@ -246,6 +268,20 @@ const DailyView = {
       item.addEventListener('click', () => {
         const taskId = item.dataset.taskId;
         this.openTaskModal(taskId);
+      });
+    });
+
+    // Make planned task items draggable (drag to copy into actual section)
+    document.querySelectorAll('#planned-tasks .task-item').forEach(item => {
+      item.setAttribute('draggable', 'true');
+      item.classList.add('draggable-planned');
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/x-planned-task-id', item.dataset.taskId);
+        e.dataTransfer.effectAllowed = 'copy';
+        setTimeout(() => item.classList.add('dragging-planned'), 0);
+      });
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging-planned');
       });
     });
 
@@ -459,7 +495,7 @@ const DailyView = {
   // Task Modal
   // ========================================
 
-  openTaskModal(taskId = null, scheduledHour = null, scheduledMinutes = 0, isPlanned = true) {
+  openTaskModal(taskId = null, scheduledHour = null, scheduledMinutes = 0, isPlanned = true, duration = null) {
     const modal = document.getElementById('task-modal');
     const title = document.getElementById('task-modal-title');
     const deleteBtn = document.getElementById('task-delete');
@@ -474,6 +510,7 @@ const DailyView = {
       const task = this.currentEntry.tasks.find(t => t.id === taskId);
       if (task) {
         document.getElementById('task-text').value = task.text;
+        document.getElementById('task-date').value = Utils.formatDateKey(this.currentDate);
         document.getElementById('task-scheduled').value = task.scheduledTime || '';
         document.getElementById('task-time').value = task.expectedTime || '';
         document.getElementById('task-progress').value = task.progress;
@@ -488,10 +525,11 @@ const DailyView = {
       deleteBtn.classList.add('hidden');
 
       document.getElementById('task-text').value = '';
+      document.getElementById('task-date').value = Utils.formatDateKey(this.currentDate);
       document.getElementById('task-scheduled').value = scheduledHour !== null
         ? `${String(scheduledHour).padStart(2, '0')}:${String(scheduledMinutes).padStart(2, '0')}`
         : '';
-      document.getElementById('task-time').value = '';
+      document.getElementById('task-time').value = duration || '';
       document.getElementById('task-progress').value = 'not-started';
       document.getElementById('task-comment').value = '';
       document.getElementById('task-planned').checked = isPlanned;
@@ -501,6 +539,36 @@ const DailyView = {
 
     modal.classList.remove('hidden');
     document.getElementById('task-text').focus();
+  },
+
+  copyPlannedToActual(plannedTaskId) {
+    const planned = this.currentEntry.tasks.find(t => t.id === plannedTaskId);
+    if (!planned) return;
+
+    // Don't duplicate if already linked
+    const alreadyLinked = this.currentEntry.tasks.some(t => t.linkedTaskId === plannedTaskId);
+    if (alreadyLinked) {
+      App.updateStatus('Already linked — edit the existing actual task');
+      return;
+    }
+
+    const actualTask = {
+      id: Utils.generateId(),
+      text: planned.text,
+      scheduledTime: null,
+      expectedTime: planned.expectedTime || null,
+      progress: 'not-started',
+      comment: '',
+      planned: false,
+      linkedTaskId: planned.id,
+      createdAt: new Date().toISOString()
+    };
+
+    this.currentEntry.tasks.push(actualTask);
+    this.saveEntry();
+    this.renderTasks();
+    this.renderTimeline();
+    App.updateStatus('Copied to actual — click to edit');
   },
 
   populatePlannedDropdown(selectedId = '') {
@@ -563,6 +631,9 @@ const DailyView = {
     const linkedTaskId = !isPlanned
       ? (document.getElementById('task-linked-plan').value || null)
       : null;
+    const taskDateKey = document.getElementById('task-date').value || Utils.formatDateKey(this.currentDate);
+    const currentDateKey = Utils.formatDateKey(this.currentDate);
+    const isSameDay = taskDateKey === currentDateKey;
 
     const taskData = {
       text,
@@ -579,24 +650,43 @@ const DailyView = {
     }
 
     if (this.editingTaskId) {
-      // Update existing
-      const index = this.currentEntry.tasks.findIndex(t => t.id === this.editingTaskId);
-      if (index !== -1) {
-        this.currentEntry.tasks[index] = {
-          ...this.currentEntry.tasks[index],
-          ...taskData
-        };
+      if (isSameDay) {
+        // Update in current day
+        const index = this.currentEntry.tasks.findIndex(t => t.id === this.editingTaskId);
+        if (index !== -1) {
+          this.currentEntry.tasks[index] = { ...this.currentEntry.tasks[index], ...taskData };
+        }
+        this.saveEntry();
+      } else {
+        // Move task to a different day
+        const existing = this.currentEntry.tasks.find(t => t.id === this.editingTaskId);
+        this.currentEntry.tasks = this.currentEntry.tasks.filter(t => t.id !== this.editingTaskId);
+        storage.setDayEntry(currentDateKey, this.currentEntry);
+
+        const targetEntry = storage.getDayEntry(taskDateKey);
+        if (!targetEntry.tasks) targetEntry.tasks = [];
+        targetEntry.tasks.push({ ...existing, ...taskData });
+        storage.setDayEntry(taskDateKey, targetEntry);
+        App.updateStatus(`Task moved to ${taskDateKey}`);
       }
     } else {
-      // Create new
-      this.currentEntry.tasks.push({
+      const newTask = {
         id: Utils.generateId(),
         ...taskData,
         createdAt: new Date().toISOString()
-      });
+      };
+      if (isSameDay) {
+        this.currentEntry.tasks.push(newTask);
+        this.saveEntry();
+      } else {
+        const targetEntry = storage.getDayEntry(taskDateKey);
+        if (!targetEntry.tasks) targetEntry.tasks = [];
+        targetEntry.tasks.push(newTask);
+        storage.setDayEntry(taskDateKey, targetEntry);
+        App.updateStatus(`Task added to ${taskDateKey}`);
+      }
     }
 
-    this.saveEntry();
     this.closeTaskModal();
     this.renderTasks();
     this.renderTimeline();
@@ -766,10 +856,17 @@ const DailyView = {
       ).join('');
     }
 
-    // Render timeline grid
-    let gridHtml = '';
+    // Render timeline grid with column headers
+    let gridHtml = `
+      <div class="timeline-col-labels">
+        <div class="timeline-hour-label"></div>
+        <div class="timeline-col-header-content">
+          <div class="timeline-col-label-planned">Planned</div>
+          <div class="timeline-col-label-actual">Actual</div>
+        </div>
+      </div>
+    `;
     for (let hour = this.timelineStartHour; hour <= this.timelineEndHour; hour++) {
-      const hourStr = String(hour).padStart(2, '0');
       const label = hour === 0 ? '12 AM' :
                     hour < 12 ? `${hour} AM` :
                     hour === 12 ? '12 PM' :
@@ -801,10 +898,10 @@ const DailyView = {
         taskNode.style.top = `${topPercent}%`;
 
         // Calculate height based on duration
-        const durationMinutes = Utils.parseDuration(task.expectedTime) || 30; // default 30min
+        const durationMinutes = Utils.parseDuration(task.expectedTime) || 30;
         const hourHeight = hourContent.offsetHeight || 60;
         const heightPx = (durationMinutes / 60) * hourHeight;
-        taskNode.style.height = `${Math.max(24, heightPx)}px`; // min 24px
+        taskNode.style.height = `${Math.max(24, heightPx)}px`;
 
         hourContent.appendChild(taskNode);
       }
@@ -813,17 +910,19 @@ const DailyView = {
     // Add current time indicator
     this.updateCurrentTimeIndicator();
 
-    // Setup drag and drop
+    // Setup drag and drop + draw-to-create
     this.setupTimelineDragDrop();
+    this.setupTimelineDraw();
   },
 
   renderTimelineTask(task, scheduled, minutes = 0) {
     const doneClass = task.progress === 'done' ? 'done' : '';
     const scheduledClass = scheduled ? 'scheduled' : '';
+    const sideClass = scheduled ? (task.planned !== false ? 'planned-side' : 'actual-side') : '';
     const timeStr = scheduled && task.scheduledTime ? this.formatTime(task.scheduledTime) : '';
 
     return `
-      <div class="timeline-task ${doneClass} ${scheduledClass}"
+      <div class="timeline-task ${doneClass} ${scheduledClass} ${sideClass}"
            data-task-id="${task.id}"
            draggable="true">
         <div class="task-progress-indicator ${task.progress}"></div>
@@ -917,14 +1016,6 @@ const DailyView = {
         this.scheduleTask(taskId, hour, minutes);
       });
 
-      // Click on empty area to add task at that time
-      hourContent.addEventListener('dblclick', (e) => {
-        if (e.target === hourContent || e.target.classList.contains('timeline-drop-indicator')) {
-          const hour = parseInt(hourContent.dataset.hour);
-          const minutes = this.getDropMinutes(hourContent, e);
-          this.openTaskModal(null, hour, minutes);
-        }
-      });
     });
 
     // Unscheduled pool drop zone
@@ -947,6 +1038,162 @@ const DailyView = {
         this.unscheduleTask(taskId);
       });
     }
+  },
+
+  setupTimelineDraw() {
+    const gridContainer = document.getElementById('timeline-grid');
+    if (!gridContainer) return;
+
+    // Clean up previous listeners and timer
+    if (this._drawCleanup) {
+      this._drawCleanup();
+      this._drawCleanup = null;
+    }
+
+    // Auto-refresh the current time indicator every minute
+    const timeInterval = setInterval(() => this.updateCurrentTimeIndicator(), 60 * 1000);
+
+    let drawPreview = null;
+    let drawStartY = 0;
+    let drawStartTime = null;
+    let drawSide = 'planned';
+    let isDrawActive = false;
+
+    const getTimeFromGridY = (clientY) => {
+      const firstHourEl = gridContainer.querySelector('.timeline-hour');
+      const timelineTop = firstHourEl
+        ? firstHourEl.getBoundingClientRect().top
+        : gridContainer.getBoundingClientRect().top;
+      const y = Math.max(0, clientY - timelineTop);
+      const hourHeight = 60;
+      const totalMin = (y / hourHeight) * 60;
+      const snapped = Math.round(totalMin / 15) * 15;
+      const hour = this.timelineStartHour + Math.floor(snapped / 60);
+      const minutes = snapped % 60;
+      return {
+        hour: Math.max(this.timelineStartHour, Math.min(this.timelineEndHour, hour)),
+        minutes
+      };
+    };
+
+    const getSideFromClientX = (clientX) => {
+      const rect = gridContainer.getBoundingClientRect();
+      const labelWidth = 50;
+      const relX = clientX - rect.left - labelWidth;
+      const contentWidth = rect.width - labelWidth;
+      return relX < contentWidth * 0.5 ? 'planned' : 'actual';
+    };
+
+    const onMouseDown = (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest('.timeline-task')) return;
+      if (!e.target.closest('.timeline-hour-content')) return;
+
+      isDrawActive = true;
+      drawStartY = e.clientY;
+      drawStartTime = getTimeFromGridY(e.clientY);
+      drawSide = getSideFromClientX(e.clientX);
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDrawActive) return;
+      if (Math.abs(e.clientY - drawStartY) < 10) return;
+
+      if (!drawPreview) {
+        drawPreview = document.createElement('div');
+        drawPreview.className = `timeline-draw-preview ${drawSide}-preview`;
+        gridContainer.appendChild(drawPreview);
+      }
+
+      const endTime = getTimeFromGridY(e.clientY);
+      this.updateDrawPreview(drawPreview, drawStartTime, endTime, drawSide);
+    };
+
+    const onMouseUp = (e) => {
+      if (!isDrawActive) return;
+      isDrawActive = false;
+
+      if (drawPreview) {
+        drawPreview.remove();
+        drawPreview = null;
+      }
+
+      const dragDistance = Math.abs(e.clientY - drawStartY);
+      const endTime = getTimeFromGridY(e.clientY);
+      const startMin = drawStartTime.hour * 60 + drawStartTime.minutes;
+      const endMin = endTime.hour * 60 + endTime.minutes;
+      const durationMin = Math.abs(endMin - startMin);
+      const isPlanned = drawSide === 'planned';
+
+      if (dragDistance < 10 || durationMin < 15) {
+        // Treat as click: open modal at this time
+        this.openTaskModal(null, drawStartTime.hour, drawStartTime.minutes, isPlanned);
+      } else {
+        // Drag: pre-fill duration
+        const actualStart = startMin <= endMin ? drawStartTime : endTime;
+        const durationStr = durationMin >= 60
+          ? `${Math.floor(durationMin / 60)}h${durationMin % 60 > 0 ? durationMin % 60 + 'm' : ''}`
+          : `${durationMin}m`;
+        this.openTaskModal(null, actualStart.hour, actualStart.minutes, isPlanned, durationStr);
+      }
+    };
+
+    gridContainer.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    this._drawCleanup = () => {
+      gridContainer.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      clearInterval(timeInterval);
+    };
+  },
+
+  updateDrawPreview(previewEl, startTime, endTime, drawSide) {
+    const hourHeight = 60;
+    const startY = (startTime.hour - this.timelineStartHour) * hourHeight + (startTime.minutes / 60) * hourHeight;
+    const endY = (endTime.hour - this.timelineStartHour) * hourHeight + (endTime.minutes / 60) * hourHeight;
+    const top = Math.min(startY, endY);
+    const height = Math.max(Math.abs(endY - startY), 4);
+
+    // Horizontal position matching planned-side / actual-side layout
+    const gridEl = document.getElementById('timeline-grid');
+
+    // Offset by the column labels header height so the preview aligns with the hour cells
+    const firstHourEl = gridEl.querySelector('.timeline-hour');
+    const headerOffset = firstHourEl ? firstHourEl.offsetTop : 0;
+
+    previewEl.style.top = `${top + headerOffset}px`;
+    previewEl.style.height = `${height}px`;
+
+    const labelWidth = 50;
+    const contentWidth = gridEl.offsetWidth - labelWidth;
+    const splitPx = labelWidth + Math.floor(contentWidth * 0.40);
+
+    if (drawSide === 'planned') {
+      previewEl.style.left = `${labelWidth + 4}px`;
+      previewEl.style.right = `${gridEl.offsetWidth - splitPx + 4}px`;
+    } else {
+      previewEl.style.left = `${splitPx - 4}px`;
+      previewEl.style.right = '4px';
+    }
+
+    // Time label
+    const actualStart = startTime.hour * 60 + startTime.minutes <= endTime.hour * 60 + endTime.minutes
+      ? startTime : endTime;
+    const durationMin = Math.abs(
+      (startTime.hour * 60 + startTime.minutes) - (endTime.hour * 60 + endTime.minutes)
+    );
+    const timeLabel = this.formatTime(
+      `${String(actualStart.hour).padStart(2, '0')}:${String(actualStart.minutes).padStart(2, '0')}`
+    );
+    const durationLabel = durationMin >= 60
+      ? `${Math.floor(durationMin / 60)}h${durationMin % 60 > 0 ? durationMin % 60 + 'm' : ''}`
+      : `${durationMin}m`;
+
+    previewEl.textContent = durationMin > 0 ? `${timeLabel} · ${durationLabel}` : timeLabel;
   },
 
   getDropMinutes(hourContent, e) {

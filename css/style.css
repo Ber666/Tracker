@@ -3,30 +3,35 @@
    ======================================== */
 
 :root {
-  /* Colors */
-  --color-bg: #fafafa;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f5f5f5;
-  --color-border: #e5e5e5;
-  --color-border-light: #f0f0f0;
+  /* Colors — UCSD-inspired palette */
 
-  --color-text: #171717;
-  --color-text-secondary: #525252;
-  --color-text-tertiary: #a3a3a3;
+  /* Backgrounds: cool coastal blue-gray */
+  --color-bg: #EEF3F8;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F0F6FA;
+  --color-border: #C8D8E8;
+  --color-border-light: #DCE8F2;
 
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-light: #eef2ff;
+  /* Text: UCSD Navy hierarchy */
+  --color-text: #182B49;
+  --color-text-secondary: #3A5478;
+  --color-text-tertiary: #7A9AB2;
 
-  --color-accent: #8b5cf6;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  /* Primary: UCSD Blue */
+  --color-primary: #006A96;
+  --color-primary-hover: #005580;
+  --color-primary-light: #DCF0F8;
+
+  /* Accent: UCSD Gold */
+  --color-accent: #C69214;
+  --color-success: #1BA87A;
+  --color-warning: #D4870A;
+  --color-danger: #C8323A;
 
   /* Progress colors */
-  --color-done: #22c55e;
-  --color-half: #f59e0b;
-  --color-not-started: #d4d4d4;
+  --color-done: #1BA87A;
+  --color-half: #D4870A;
+  --color-not-started: #B4C8DA;
 
   /* Spacing */
   --space-xs: 4px;
@@ -51,10 +56,10 @@
   --radius-lg: 16px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  /* Shadows: navy-tinted for cohesion */
+  --shadow-sm: 0 1px 3px rgba(24, 43, 73, 0.06);
+  --shadow-md: 0 4px 16px rgba(24, 43, 73, 0.10);
+  --shadow-lg: 0 8px 32px rgba(24, 43, 73, 0.15);
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -65,15 +70,15 @@
 /* Dark mode - can be enabled later */
 @media (prefers-color-scheme: dark-disabled) {
   :root {
-    --color-bg: #0a0a0a;
-    --color-surface: #171717;
-    --color-surface-hover: #262626;
-    --color-border: #262626;
-    --color-border-light: #1f1f1f;
-    --color-text: #fafafa;
-    --color-text-secondary: #a3a3a3;
-    --color-text-tertiary: #525252;
-    --color-primary-light: #1e1b4b;
+    --color-bg: #0A1628;
+    --color-surface: #132038;
+    --color-surface-hover: #1C2E4A;
+    --color-border: #1E3A5C;
+    --color-border-light: #162C48;
+    --color-text: #EEF3F8;
+    --color-text-secondary: #7A9AB2;
+    --color-text-tertiary: #3A5478;
+    --color-primary-light: #0A2840;
   }
 }
 
@@ -127,7 +132,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: var(--space-lg);
-  background: linear-gradient(135deg, #fafafa 0%, #f0f0f5 100%);
+  background: linear-gradient(135deg, #182B49 0%, #006A96 100%);
 }
 
 .setup-container {
@@ -689,8 +694,8 @@ body {
 
 /* Drop zone highlight when planned task dragged over actual section */
 .drop-target-active {
-  background: #ede9fe !important;
-  border: 2px dashed #6d28d9;
+  background: rgba(0, 106, 150, 0.08) !important;
+  border: 2px dashed #006A96;
   border-radius: var(--radius-md);
   min-height: 48px;
 }
@@ -743,23 +748,23 @@ body {
 }
 
 .stat-done {
-  background: #dcfce7;
-  color: #15803d;
+  background: #D1F5EA;
+  color: #0F7A56;
 }
 
 .stat-half {
-  background: #fef3c7;
-  color: #b45309;
+  background: #FEF0D0;
+  color: #8A5500;
 }
 
 .stat-missed {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #FDE8EA;
+  color: #A02028;
 }
 
 .stat-added {
-  background: #ede9fe;
-  color: #6d28d9;
+  background: #FFF3D0;
+  color: #8A6300;
 }
 
 .contrast-row {
@@ -845,13 +850,13 @@ body {
 .contrast-additions {
   padding: var(--space-xs) var(--space-md);
   border-top: 1px solid var(--color-border-light);
-  background: #faf5ff;
+  background: #F0F8FC;
 }
 
 .contrast-additions-label {
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: #6d28d9;
+  color: var(--color-accent);
   margin-bottom: var(--space-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -868,7 +873,7 @@ body {
 
 .contrast-plus {
   font-weight: 700;
-  color: #6d28d9;
+  color: var(--color-accent);
 }
 
 /* Shift reason */
@@ -1030,11 +1035,6 @@ body {
   position: relative;
   padding: 2px var(--space-sm);
   overflow: visible; /* Allow tasks to overflow into next hours */
-  /* Show 15-min grid lines */
-  background-image:
-    linear-gradient(to bottom, transparent 24%, var(--color-border-light) 25%, var(--color-border-light) 26%, transparent 26%),
-    linear-gradient(to bottom, transparent 49%, var(--color-border-light) 50%, var(--color-border-light) 51%, transparent 51%),
-    linear-gradient(to bottom, transparent 74%, var(--color-border-light) 75%, var(--color-border-light) 76%, transparent 76%);
 }
 
 .timeline-hour-content.drag-over {
@@ -1170,11 +1170,23 @@ body {
 /* Positioned task on timeline (has scheduled time) */
 .timeline-task.scheduled {
   position: absolute;
-  left: var(--space-sm);
-  right: var(--space-sm);
   z-index: 5;
   min-height: 24px;
   align-items: flex-start;
+}
+
+/* Planned tasks: left column (0–60%) */
+.timeline-task.scheduled.planned-side {
+  left: 4px;
+  right: 40%;
+  border-left-color: var(--color-primary);
+}
+
+/* Actual tasks: right column (40–100%), slight overlap */
+.timeline-task.scheduled.actual-side {
+  left: 40%;
+  right: 4px;
+  border-left-color: var(--color-accent);
 }
 
 .timeline-task.scheduled:hover {
@@ -1185,6 +1197,90 @@ body {
 .timeline-task.scheduled .timeline-task-text {
   white-space: normal;
   word-break: break-word;
+}
+
+/* Column header labels */
+.timeline-col-labels {
+  display: flex;
+  align-items: center;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--color-border-light);
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  z-index: 10;
+}
+
+.timeline-col-header-content {
+  flex: 1;
+  position: relative;
+  height: 18px;
+}
+
+.timeline-col-label-planned,
+.timeline-col-label-actual {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  top: 0;
+}
+
+.timeline-col-label-planned {
+  left: 4px;
+  width: 60%;
+  color: var(--color-primary);
+  text-align: center;
+}
+
+.timeline-col-label-actual {
+  left: 40%;
+  right: 0;
+  color: var(--color-accent);
+  text-align: center;
+}
+
+/* Center divider between planned and actual */
+.timeline-hour-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--color-border-light);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Draw-to-create preview */
+.timeline-draw-preview {
+  position: absolute;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: 25;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border: 2px solid;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+  user-select: none;
+}
+
+.planned-preview {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.actual-preview {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* Drag ghost */
@@ -1304,18 +1400,18 @@ body {
 }
 
 .exercise-intensity.low {
-  background: #dcfce7;
-  color: #15803d;
+  background: #D1F5EA;
+  color: #0F7A56;
 }
 
 .exercise-intensity.medium {
-  background: #fef3c7;
-  color: #b45309;
+  background: #FEF0D0;
+  color: #8A5500;
 }
 
 .exercise-intensity.high {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #FDE8EA;
+  color: #A02028;
 }
 
 /* ========================================
