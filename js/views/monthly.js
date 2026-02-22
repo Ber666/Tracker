@@ -106,7 +106,26 @@ const MonthlyView = {
       if (isToday) classes += ' today';
       if (isFuture) classes += ' future';
 
-      return `<div class="${classes}" data-date="${dateKey}">${day.getDate()}</div>`;
+      // Plan completion bar
+      let planBarHtml = '';
+      if (!isFuture) {
+        const plannedTasks = entry?.tasks?.filter(t => t.planned) || [];
+        const total = plannedTasks.length;
+        if (total > 0) {
+          const done = plannedTasks.filter(t => t.progress === 'done').length;
+          const half = plannedTasks.filter(t => t.progress === 'half-done').length;
+          const doneW = Math.round((done / total) * 100);
+          const halfW = Math.round((half / total) * 100);
+          const missedW = 100 - doneW - halfW;
+          planBarHtml = `<div class="calendar-plan-bar">
+            <div class="calendar-plan-done" style="width:${doneW}%"></div>
+            <div class="calendar-plan-half" style="width:${halfW}%"></div>
+            <div class="calendar-plan-missed" style="width:${missedW}%"></div>
+          </div>`;
+        }
+      }
+
+      return `<div class="${classes}" data-date="${dateKey}">${day.getDate()}${planBarHtml}</div>`;
     }).join('');
 
     container.innerHTML = html;

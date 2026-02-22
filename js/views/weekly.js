@@ -101,6 +101,20 @@ const WeeklyView = {
         entry?.sleep?.wakeTime
       );
 
+      // Plan completion indicator
+      let planHtml = '';
+      if (!isFuture) {
+        const plannedTasks = entry?.tasks?.filter(t => t.planned) || [];
+        const total = plannedTasks.length;
+        if (total > 0) {
+          const done = plannedTasks.filter(t => t.progress === 'done').length;
+          const half = plannedTasks.filter(t => t.progress === 'half-done').length;
+          const cls = done === total ? 'plan-complete' :
+                      done === 0 && half === 0 ? 'plan-missed' : 'plan-partial';
+          planHtml = `<span class="week-day-plan ${cls}">${done}/${total}</span>`;
+        }
+      }
+
       let classes = 'week-day';
       if (hasEntry) classes += ' has-entry';
       if (isToday) classes += ' today';
@@ -111,6 +125,7 @@ const WeeklyView = {
           <span class="week-day-date">${day.getDate()}</span>
           <span class="week-day-mood">${moodEmoji}</span>
           <span class="week-day-sleep">${sleepDuration || '-'}</span>
+          ${planHtml}
         </div>
       `;
     }).join('');

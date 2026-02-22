@@ -219,6 +219,10 @@ body {
   gap: var(--space-md);
 }
 
+.input-row-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .time-input {
   width: 100%;
 }
@@ -668,6 +672,27 @@ body {
   height: 16px;
   accent-color: var(--color-primary);
   cursor: pointer;
+}
+
+/* Draggable planned task */
+.draggable-planned {
+  cursor: grab;
+}
+
+.draggable-planned:active {
+  cursor: grabbing;
+}
+
+.dragging-planned {
+  opacity: 0.4;
+}
+
+/* Drop zone highlight when planned task dragged over actual section */
+.drop-target-active {
+  background: #ede9fe !important;
+  border: 2px dashed #6d28d9;
+  border-radius: var(--radius-md);
+  min-height: 48px;
 }
 
 /* Linked badge on actual tasks */
@@ -1359,6 +1384,17 @@ body {
   color: var(--color-text-secondary);
 }
 
+.week-day-plan {
+  font-size: 10px;
+  font-weight: 700;
+  display: block;
+  margin-top: 2px;
+}
+
+.week-day-plan.plan-complete { color: var(--color-done); }
+.week-day-plan.plan-partial  { color: var(--color-half); }
+.week-day-plan.plan-missed   { color: var(--color-danger); }
+
 /* ========================================
    Stats Grid
    ======================================== */
@@ -1434,6 +1470,34 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
+  position: relative;
+}
+
+/* Plan completion bar on calendar days */
+.calendar-plan-bar {
+  position: absolute;
+  bottom: 3px;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+}
+
+.calendar-plan-done {
+  background: var(--color-done);
+  height: 100%;
+}
+
+.calendar-plan-half {
+  background: var(--color-half);
+  height: 100%;
+}
+
+.calendar-plan-missed {
+  background: var(--color-border);
+  height: 100%;
 }
 
 .calendar-day:hover {
@@ -1916,7 +1980,8 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .input-row {
+  .input-row,
+  .input-row-3 {
     grid-template-columns: 1fr;
   }
 
