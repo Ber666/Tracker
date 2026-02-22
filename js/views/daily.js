@@ -65,10 +65,17 @@ const DailyView = {
     });
 
     // Task modal
-    document.getElementById('add-task-btn').addEventListener('click', () => this.openTaskModal());
+    document.getElementById('add-task-btn').addEventListener('click', () => this.openTaskModal(null, null, 0, true));
+    document.getElementById('add-planned-btn').addEventListener('click', () => this.openTaskModal(null, null, 0, true));
+    document.getElementById('add-actual-btn').addEventListener('click', () => this.openTaskModal(null, null, 0, false));
     document.getElementById('task-save').addEventListener('click', () => this.saveTask());
     document.getElementById('task-cancel').addEventListener('click', () => this.closeTaskModal());
     document.getElementById('task-delete').addEventListener('click', () => this.deleteTask());
+
+    // Planned checkbox toggles the "links to planned" dropdown
+    document.getElementById('task-planned').addEventListener('change', (e) => {
+      this.toggleLinkToPlannedVisibility(!e.target.checked);
+    });
 
     // Notes tabs (edit/preview)
     document.querySelectorAll('.notes-tab').forEach(tab => {
@@ -98,7 +105,7 @@ const DailyView = {
     document.getElementById('bed-time').addEventListener('change', () => this.updateSleepDuration());
     document.getElementById('wake-time').addEventListener('change', () => this.updateSleepDuration());
 
-    // Auto-save on input changes (sleep fields only - editors handle their own)
+    // Auto-save on input changes (sleep fields + shift reason)
     const autoSaveInputs = ['bed-time', 'wake-time', 'sleep-comment'];
 
     autoSaveInputs.forEach(id => {
@@ -108,6 +115,11 @@ const DailyView = {
         el.addEventListener('input', Utils.debounce(() => this.autoSave(), 1000));
       }
     });
+
+    const shiftReasonEl = document.getElementById('plan-shift-reason');
+    if (shiftReasonEl) {
+      shiftReasonEl.addEventListener('input', Utils.debounce(() => this.autoSave(), 1000));
+    }
   },
 
   initRatingInputs() {
@@ -213,20 +225,20 @@ const DailyView = {
 
     const tasks = this.currentEntry.tasks || [];
     const plannedTasks = tasks.filter(t => t.planned);
-    const unplannedTasks = tasks.filter(t => !t.planned);
+    const actualTasks = tasks.filter(t => !t.planned);
 
     // Render planned tasks
     if (plannedTasks.length === 0) {
-      plannedContainer.innerHTML = '<div class="empty-state">No planned tasks</div>';
+      plannedContainer.innerHTML = '<div class="empty-state">No planned tasks — add your morning plan</div>';
     } else {
       plannedContainer.innerHTML = plannedTasks.map(task => this.renderTaskItem(task)).join('');
     }
 
-    // Render unplanned tasks
-    if (unplannedTasks.length === 0) {
-      unplannedContainer.innerHTML = '<div class="empty-state">No tasks added during day</div>';
+    // Render actual tasks
+    if (actualTasks.length === 0) {
+      unplannedContainer.innerHTML = '<div class="empty-state">No actual tasks logged</div>';
     } else {
-      unplannedContainer.innerHTML = unplannedTasks.map(task => this.renderTaskItem(task)).join('');
+      unplannedContainer.innerHTML = actualTasks.map(task => this.renderTaskItem(task, tasks)).join('');
     }
 
     // Bind click events
@@ -236,6 +248,15 @@ const DailyView = {
         this.openTaskModal(taskId);
       });
     });
+
+    // Load shift reason
+    const shiftReasonEl = document.getElementById('plan-shift-reason');
+    if (shiftReasonEl) {
+      shiftReasonEl.value = this.currentEntry.shiftReason || '';
+    }
+
+    // Render plan vs reality contrast
+    this.renderPlanContrast(plannedTasks, actualTasks);
 
     // Render summary
     const done = tasks.filter(t => t.progress === 'done').length;
@@ -248,7 +269,7 @@ const DailyView = {
         Done: ${done} |
         Half: ${half} |
         Not Started: ${notStarted} |
-        Unplanned: ${unplannedTasks.length}
+        Actual (unlinked): ${actualTasks.filter(t => !t.linkedTaskId).length}
       `;
       summaryContainer.style.display = 'block';
     } else {
@@ -256,11 +277,93 @@ const DailyView = {
     }
   },
 
-  renderTaskItem(task) {
+  renderPlanContrast(plannedTasks, actualTasks) {
+    const panel = document.getElementById('plan-vs-reality');
+    const breakdownEl = document.getElementById('contrast-breakdown');
+    if (!panel || !breakdownEl) return;
+
+    if (plannedTasks.length === 0) {
+      panel.classList.add('hidden');
+      return;
+    }
+
+    // For each planned task, find linked actual tasks
+    const plannedRows = plannedTasks.map(planned => {
+      const linked = actualTasks.filter(a => a.linkedTaskId === planned.id);
+
+      // Determine effective status from progress
+      const statusClass = planned.progress === 'done' ? 'contrast-done' :
+                          planned.progress === 'half-done' ? 'contrast-half' : 'contrast-missed';
+      const statusIcon = planned.progress === 'done' ? '✓' :
+                         planned.progress === 'half-done' ? '~' : '✗';
+
+      const linkedHtml = linked.map(a => `
+        <div class="contrast-linked-actual">
+          <span class="contrast-arrow">→</span>
+          <span class="contrast-actual-text">${this.escapeHtml(a.text)}</span>
+          ${a.expectedTime ? `<span class="contrast-actual-time">${a.expectedTime}</span>` : ''}
+        </div>
+      `).join('');
+
+      return `
+        <div class="contrast-row ${statusClass}">
+          <div class="contrast-planned-row">
+            <span class="contrast-status">${statusIcon}</span>
+            <span class="contrast-task-text">${this.escapeHtml(planned.text)}</span>
+            ${planned.expectedTime ? `<span class="contrast-task-time">${planned.expectedTime}</span>` : ''}
+          </div>
+          ${linkedHtml}
+        </div>
+      `;
+    }).join('');
+
+    // Unlinked actual tasks (pure additions not corresponding to any plan)
+    const unlinkedActuals = actualTasks.filter(a => !a.linkedTaskId);
+    const additionsHtml = unlinkedActuals.length > 0 ? `
+      <div class="contrast-additions">
+        <div class="contrast-additions-label">Unplanned additions</div>
+        ${unlinkedActuals.map(a => `
+          <div class="contrast-addition-row">
+            <span class="contrast-plus">+</span>
+            <span class="contrast-task-text">${this.escapeHtml(a.text)}</span>
+            ${a.expectedTime ? `<span class="contrast-task-time">${a.expectedTime}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+
+    // Summary stats
+    const done = plannedTasks.filter(t => t.progress === 'done').length;
+    const half = plannedTasks.filter(t => t.progress === 'half-done').length;
+    const missed = plannedTasks.filter(t => t.progress === 'not-started').length;
+
+    const statsHtml = `
+      <div class="contrast-stats">
+        <span class="contrast-stat stat-done">${done}/${plannedTasks.length} done</span>
+        ${half > 0 ? `<span class="contrast-stat stat-half">${half} half</span>` : ''}
+        ${missed > 0 ? `<span class="contrast-stat stat-missed">${missed} missed</span>` : ''}
+        ${unlinkedActuals.length > 0 ? `<span class="contrast-stat stat-added">+${unlinkedActuals.length} added</span>` : ''}
+      </div>
+    `;
+
+    breakdownEl.innerHTML = statsHtml + plannedRows + additionsHtml;
+    panel.classList.remove('hidden');
+  },
+
+  renderTaskItem(task, allTasks = []) {
     const textClass = task.progress === 'done' ? 'task-text done' : 'task-text';
     const scheduledStr = task.scheduledTime ? this.formatTime(task.scheduledTime) : '';
     const hasNotes = task.comment && task.comment.trim().length > 0;
     const notesPreview = hasNotes ? Markdown.preview(task.comment, 80) : '';
+
+    // Show linked info: if actual task links to a planned task, show its name
+    let linkedBadge = '';
+    if (!task.planned && task.linkedTaskId && allTasks.length > 0) {
+      const linked = allTasks.find(t => t.id === task.linkedTaskId);
+      if (linked) {
+        linkedBadge = `<span class="task-linked-badge" title="Links to planned: ${this.escapeHtml(linked.text)}">→ plan</span>`;
+      }
+    }
 
     return `
       <div class="task-item" data-task-id="${task.id}">
@@ -270,6 +373,7 @@ const DailyView = {
           <div class="task-meta">
             ${scheduledStr ? `<span class="task-time">${scheduledStr}</span>` : ''}
             ${task.expectedTime ? `<span class="task-time">${task.expectedTime}</span>` : ''}
+            ${linkedBadge}
             ${hasNotes ? `<span class="task-has-notes" title="Has notes">📝</span>` : ''}
           </div>
           ${notesPreview ? `<div class="task-notes-preview">${this.escapeHtml(notesPreview)}</div>` : ''}
@@ -355,7 +459,7 @@ const DailyView = {
   // Task Modal
   // ========================================
 
-  openTaskModal(taskId = null, scheduledHour = null, scheduledMinutes = 0) {
+  openTaskModal(taskId = null, scheduledHour = null, scheduledMinutes = 0, isPlanned = true) {
     const modal = document.getElementById('task-modal');
     const title = document.getElementById('task-modal-title');
     const deleteBtn = document.getElementById('task-delete');
@@ -374,10 +478,13 @@ const DailyView = {
         document.getElementById('task-time').value = task.expectedTime || '';
         document.getElementById('task-progress').value = task.progress;
         document.getElementById('task-comment').value = task.comment || '';
+        document.getElementById('task-planned').checked = task.planned !== false;
+        this.populatePlannedDropdown(task.linkedTaskId || '');
+        this.toggleLinkToPlannedVisibility(task.planned === false);
       }
     } else {
       // New task
-      title.textContent = 'Add Task';
+      title.textContent = isPlanned ? 'Add Planned Task' : 'Add Actual Task';
       deleteBtn.classList.add('hidden');
 
       document.getElementById('task-text').value = '';
@@ -387,10 +494,29 @@ const DailyView = {
       document.getElementById('task-time').value = '';
       document.getElementById('task-progress').value = 'not-started';
       document.getElementById('task-comment').value = '';
+      document.getElementById('task-planned').checked = isPlanned;
+      this.populatePlannedDropdown('');
+      this.toggleLinkToPlannedVisibility(!isPlanned);
     }
 
     modal.classList.remove('hidden');
     document.getElementById('task-text').focus();
+  },
+
+  populatePlannedDropdown(selectedId = '') {
+    const select = document.getElementById('task-linked-plan');
+    if (!select) return;
+
+    const plannedTasks = (this.currentEntry.tasks || []).filter(t => t.planned);
+    select.innerHTML = '<option value="">None (standalone actual)</option>' +
+      plannedTasks.map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${this.escapeHtml(t.text)}</option>`).join('');
+  },
+
+  toggleLinkToPlannedVisibility(show) {
+    const group = document.getElementById('link-to-planned-group');
+    if (group) {
+      group.style.display = show ? '' : 'none';
+    }
   },
 
   closeTaskModal() {
@@ -433,13 +559,19 @@ const DailyView = {
     }
 
     const scheduledTime = document.getElementById('task-scheduled').value || null;
+    const isPlanned = document.getElementById('task-planned').checked;
+    const linkedTaskId = !isPlanned
+      ? (document.getElementById('task-linked-plan').value || null)
+      : null;
 
     const taskData = {
       text,
       scheduledTime,
       expectedTime: document.getElementById('task-time').value.trim() || null,
       progress: document.getElementById('task-progress').value,
-      comment: document.getElementById('task-comment').value.trim()
+      comment: document.getElementById('task-comment').value.trim(),
+      planned: isPlanned,
+      linkedTaskId
     };
 
     if (!this.currentEntry.tasks) {
@@ -457,11 +589,9 @@ const DailyView = {
       }
     } else {
       // Create new
-      const isPlanned = this.isBeforeNoon();
       this.currentEntry.tasks.push({
         id: Utils.generateId(),
         ...taskData,
-        planned: isPlanned,
         createdAt: new Date().toISOString()
       });
     }
@@ -482,12 +612,6 @@ const DailyView = {
       this.renderTasks();
       this.renderTimeline();
     }
-  },
-
-  isBeforeNoon() {
-    // Consider tasks added before noon as "planned"
-    const now = new Date();
-    return now.getHours() < 12;
   },
 
   // ========================================
@@ -607,6 +731,10 @@ const DailyView = {
 
     // Freeform
     this.currentEntry.freeform = this.editors.freeform ? this.editors.freeform.getValue() : '';
+
+    // Shift reason (plan vs reality)
+    const shiftReasonEl = document.getElementById('plan-shift-reason');
+    this.currentEntry.shiftReason = shiftReasonEl ? shiftReasonEl.value : '';
   },
 
   saveEntry() {

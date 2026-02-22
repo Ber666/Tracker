@@ -119,14 +119,30 @@
               <div id="tasks-container" class="tasks-container">
                 <!-- Planned Tasks -->
                 <div class="task-group">
-                  <h3 class="task-group-label">Planned</h3>
+                  <div class="task-group-header">
+                    <h3 class="task-group-label">Planned</h3>
+                    <button id="add-planned-btn" class="btn-link">+ Add to plan</button>
+                  </div>
                   <div id="planned-tasks" class="task-list"></div>
                 </div>
 
-                <!-- Unplanned Tasks -->
+                <!-- Actual Tasks -->
                 <div class="task-group">
-                  <h3 class="task-group-label">Added During Day</h3>
+                  <div class="task-group-header">
+                    <h3 class="task-group-label">Actual</h3>
+                    <button id="add-actual-btn" class="btn-link">+ Add actual</button>
+                  </div>
                   <div id="unplanned-tasks" class="task-list"></div>
+                </div>
+              </div>
+
+              <!-- Plan vs Reality Contrast -->
+              <div id="plan-vs-reality" class="plan-contrast hidden">
+                <div class="contrast-header">Plan vs Reality</div>
+                <div id="contrast-breakdown"></div>
+                <div class="contrast-reflection">
+                  <label>What caused the shift?</label>
+                  <textarea id="plan-shift-reason" placeholder="Reflect on why the day went differently from the plan..." rows="2"></textarea>
                 </div>
               </div>
 
@@ -342,7 +358,19 @@
               <option value="done">Done</option>
             </select>
           </div>
-          <div class="input-group"></div>
+          <div class="input-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="task-planned">
+              <span>Planned task</span>
+            </label>
+          </div>
+        </div>
+        <div class="input-group" id="link-to-planned-group" style="display:none">
+          <label>Links to planned task</label>
+          <select id="task-linked-plan">
+            <option value="">None (standalone actual)</option>
+          </select>
+          <span class="input-hint">Connect this actual task to its corresponding planned task</span>
         </div>
         <div class="input-group notes-group">
           <div class="notes-header">

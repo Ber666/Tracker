@@ -621,6 +621,267 @@ body {
 }
 
 /* ========================================
+   Task Group Header
+   ======================================== */
+
+.task-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.btn-link {
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  padding: 2px var(--space-xs);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.btn-link:hover {
+  background: var(--color-primary-light);
+}
+
+/* ========================================
+   Checkbox Label
+   ======================================== */
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding-top: var(--space-lg); /* align with adjacent input labels */
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Linked badge on actual tasks */
+.task-linked-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+/* ========================================
+   Plan vs Reality Contrast Panel
+   ======================================== */
+
+.plan-contrast {
+  margin-top: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.contrast-header {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.contrast-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.contrast-stat {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.stat-done {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.stat-half {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.stat-missed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.stat-added {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.contrast-row {
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+  border-left: 3px solid transparent;
+}
+
+.contrast-row:last-child {
+  border-bottom: none;
+}
+
+.contrast-done {
+  border-left-color: var(--color-done);
+}
+
+.contrast-half {
+  border-left-color: var(--color-half);
+}
+
+.contrast-missed {
+  border-left-color: var(--color-danger);
+  opacity: 0.7;
+}
+
+.contrast-planned-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.contrast-status {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.contrast-done .contrast-status { color: var(--color-done); }
+.contrast-half .contrast-status { color: var(--color-half); }
+.contrast-missed .contrast-status { color: var(--color-danger); }
+
+.contrast-task-text {
+  font-size: var(--font-size-sm);
+  flex: 1;
+}
+
+.contrast-missed .contrast-task-text {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.contrast-task-time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* Linked actual task under a planned task */
+.contrast-linked-actual {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 2px 0 2px var(--space-lg);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.contrast-arrow {
+  color: var(--color-text-tertiary);
+}
+
+.contrast-actual-text {
+  flex: 1;
+  font-style: italic;
+}
+
+.contrast-actual-time {
+  color: var(--color-text-tertiary);
+}
+
+/* Unplanned additions block */
+.contrast-additions {
+  padding: var(--space-xs) var(--space-md);
+  border-top: 1px solid var(--color-border-light);
+  background: #faf5ff;
+}
+
+.contrast-additions-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: #6d28d9;
+  margin-bottom: var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.contrast-addition-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 2px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.contrast-plus {
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+/* Shift reason */
+.contrast-reflection {
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-bg);
+}
+
+.contrast-reflection label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-xs);
+}
+
+.contrast-reflection textarea {
+  width: 100%;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  resize: vertical;
+  min-height: 52px;
+}
+
+.contrast-reflection textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* ========================================
    Task View Toggle
    ======================================== */
 
