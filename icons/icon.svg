@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#6366f1"/>
+  <g fill="white">
+    <!-- Checkmark/task icon -->
+    <rect x="120" y="140" width="272" height="40" rx="8"/>
+    <rect x="120" y="236" width="200" height="40" rx="8"/>
+    <rect x="120" y="332" width="240" height="40" rx="8"/>
+    <!-- Check circles -->
+    <circle cx="80" cy="160" r="24" fill="none" stroke="white" stroke-width="8"/>
+    <circle cx="80" cy="256" r="24" fill="#22c55e"/>
+    <path d="M70 256 L78 264 L92 248" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="80" cy="352" r="24" fill="none" stroke="white" stroke-width="8"/>
+  </g>
+</svg>

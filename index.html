@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="screen">
+      <div class="setup-container">
+        <div class="setup-header">
+          <h1>Tracker</h1>
+          <p class="subtitle">Plan your day. Track your progress. Reflect and grow.</p>
+        </div>
+
+        <div class="setup-form">
+          <div class="input-group">
+            <label for="github-token">GitHub Personal Access Token</label>
+            <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
+            <span class="input-hint">Create at github.com/settings/tokens (scope: repo)</span>
+          </div>
+
+          <div class="input-group">
+            <label for="github-owner">GitHub Username</label>
+            <input type="text" id="github-owner" placeholder="your-username">
+          </div>
+
+          <div class="input-group">
+            <label for="github-repo">Repository Name</label>
+            <input type="text" id="github-repo" placeholder="my-journal-data">
+          </div>
+
+          <button id="setup-submit" class="btn btn-primary">Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-app" class="screen hidden">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-content">
+          <h1 class="app-title">Tracker</h1>
+          <div class="header-actions">
+            <button id="sync-btn" class="btn btn-icon" title="Sync with GitHub">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c-1.657 0-3-4.03-3-9s1.343-9 3-9m0 18c1.657 0 3-4.03 3-9s-1.343-9-3-9"/>
+              </svg>
+            </button>
+            <button id="settings-btn" class="btn btn-icon" title="Settings">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+          <button class="nav-tab active" data-view="daily">Daily</button>
+          <button class="nav-tab" data-view="weekly">Weekly</button>
+          <button class="nav-tab" data-view="monthly">Monthly</button>
+        </nav>
+      </header>
+
+      <!-- Main Content -->
+      <main class="app-main">
+        <!-- Daily View -->
+        <section id="daily-view" class="view active">
+          <!-- Date Navigation -->
+          <div class="date-nav">
+            <button id="prev-day" class="btn btn-ghost">&larr;</button>
+            <div class="date-display">
+              <span id="current-date">February 21, 2026</span>
+              <span id="day-of-week">Friday</span>
+            </div>
+            <button id="next-day" class="btn btn-ghost">&rarr;</button>
+            <button id="today-btn" class="btn btn-secondary">Today</button>
+          </div>
+
+          <!-- Tasks Section -->
+          <div class="section">
+            <div class="section-header">
+              <h2>Tasks</h2>
+              <div class="section-actions">
+                <div class="view-toggle">
+                  <button class="toggle-btn active" data-task-view="list" title="List View">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                      <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                    </svg>
+                  </button>
+                  <button class="toggle-btn" data-task-view="timeline" title="Timeline View">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                  </button>
+                </div>
+                <button id="add-task-btn" class="btn btn-small">+ Add</button>
+              </div>
+            </div>
+
+            <!-- List View -->
+            <div id="tasks-list-view" class="tasks-view active">
+              <div id="tasks-container" class="tasks-container">
+                <!-- Planned Tasks -->
+                <div class="task-group">
+                  <h3 class="task-group-label">Planned</h3>
+                  <div id="planned-tasks" class="task-list"></div>
+                </div>
+
+                <!-- Unplanned Tasks -->
+                <div class="task-group">
+                  <h3 class="task-group-label">Added During Day</h3>
+                  <div id="unplanned-tasks" class="task-list"></div>
+                </div>
+              </div>
+
+              <div id="tasks-summary" class="tasks-summary"></div>
+            </div>
+
+            <!-- Timeline View -->
+            <div id="tasks-timeline-view" class="tasks-view">
+              <div class="timeline-container">
+                <div class="timeline-unscheduled">
+                  <h4 class="timeline-section-label">Unscheduled</h4>
+                  <div id="unscheduled-tasks" class="timeline-task-pool"></div>
+                </div>
+                <div class="timeline-schedule">
+                  <div id="timeline-grid" class="timeline-grid"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sleep Section -->
+          <div class="section">
+            <div class="section-header">
+              <h2>Sleep</h2>
+            </div>
+            <div class="sleep-grid">
+              <div class="input-group compact">
+                <label>Bed Time</label>
+                <input type="time" id="bed-time" class="time-input">
+              </div>
+              <div class="input-group compact">
+                <label>Wake Time</label>
+                <input type="time" id="wake-time" class="time-input">
+              </div>
+              <div class="input-group compact">
+                <label>Duration</label>
+                <span id="sleep-duration" class="computed-value">--</span>
+              </div>
+              <div class="input-group compact">
+                <label>Quality</label>
+                <div class="rating-input" id="sleep-quality" data-value="0"></div>
+              </div>
+            </div>
+            <div class="input-group">
+              <textarea id="sleep-comment" placeholder="Notes about sleep..." rows="2"></textarea>
+            </div>
+          </div>
+
+          <!-- Exercise Section -->
+          <div class="section">
+            <div class="section-header">
+              <h2>Exercise</h2>
+              <button id="add-exercise-btn" class="btn btn-small">+ Add</button>
+            </div>
+            <div id="exercise-list" class="exercise-list"></div>
+          </div>
+
+          <!-- Energy & Mental Section -->
+          <div class="section">
+            <div class="section-header">
+              <h2>Energy & Mental</h2>
+            </div>
+            <div class="energy-mental-grid">
+              <div class="input-group compact">
+                <label>Energy</label>
+                <div class="rating-input" id="energy-rating" data-value="0"></div>
+              </div>
+              <div class="input-group compact">
+                <label>Mood</label>
+                <div class="rating-input" id="mood-rating" data-value="0"></div>
+              </div>
+            </div>
+            <div id="mental-notes-editor"></div>
+          </div>
+
+          <!-- Work Notes Section -->
+          <div class="section">
+            <div class="section-header">
+              <h2>Work Notes</h2>
+            </div>
+            <div id="work-notes-editor"></div>
+          </div>
+
+          <!-- Freeform Section -->
+          <div class="section">
+            <div class="section-header">
+              <h2>Freeform</h2>
+            </div>
+            <div id="freeform-editor"></div>
+          </div>
+        </section>
+
+        <!-- Weekly View -->
+        <section id="weekly-view" class="view">
+          <div class="date-nav">
+            <button id="prev-week" class="btn btn-ghost">&larr;</button>
+            <div class="date-display">
+              <span id="current-week">Week 8</span>
+              <span id="week-range">Feb 17 - Feb 23, 2026</span>
+            </div>
+            <button id="next-week" class="btn btn-ghost">&rarr;</button>
+            <button id="this-week-btn" class="btn btn-secondary">This Week</button>
+          </div>
+
+          <div class="section">
+            <h2>Daily Overview</h2>
+            <div id="week-overview" class="week-overview"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2>Highlights</h2>
+            </div>
+            <div id="weekly-highlights-editor"></div>
+          </div>
+
+          <div class="section">
+            <h2>Stats</h2>
+            <div id="weekly-stats" class="stats-grid"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2>Summary</h2>
+            </div>
+            <div id="weekly-summary-editor"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2>Next Week Focus</h2>
+            </div>
+            <div id="next-week-focus-editor"></div>
+          </div>
+        </section>
+
+        <!-- Monthly View -->
+        <section id="monthly-view" class="view">
+          <div class="date-nav">
+            <button id="prev-month" class="btn btn-ghost">&larr;</button>
+            <div class="date-display">
+              <span id="current-month">February 2026</span>
+            </div>
+            <button id="next-month" class="btn btn-ghost">&rarr;</button>
+            <button id="this-month-btn" class="btn btn-secondary">This Month</button>
+          </div>
+
+          <div class="section">
+            <h2>Calendar</h2>
+            <div id="month-calendar" class="month-calendar"></div>
+          </div>
+
+          <div class="section">
+            <h2>Health Trends</h2>
+            <div id="monthly-health" class="stats-grid"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2>Achievements</h2>
+            </div>
+            <div id="monthly-achievements-editor"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2>Reflections</h2>
+            </div>
+            <div id="monthly-reflections-editor"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2>Next Month Goals</h2>
+            </div>
+            <div id="next-month-goals-editor"></div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Status Bar -->
+      <div id="status-bar" class="status-bar">
+        <span id="status-text">Ready</span>
+        <span id="last-sync">Last sync: Never</span>
+      </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h3 id="task-modal-title">Add Task</h3>
+        <div class="input-group">
+          <label>Task</label>
+          <input type="text" id="task-text" placeholder="What do you need to do?">
+        </div>
+        <div class="input-row">
+          <div class="input-group">
+            <label>Scheduled Time</label>
+            <input type="time" id="task-scheduled" placeholder="09:00">
+          </div>
+          <div class="input-group">
+            <label>Duration</label>
+            <input type="text" id="task-time" placeholder="e.g., 30m, 2h">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-group">
+            <label>Progress</label>
+            <select id="task-progress">
+              <option value="not-started">Not Started</option>
+              <option value="half-done">Half Done</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="input-group"></div>
+        </div>
+        <div class="input-group notes-group">
+          <div class="notes-header">
+            <label>Notes</label>
+            <div class="notes-tabs">
+              <button type="button" class="notes-tab active" data-tab="edit">Edit</button>
+              <button type="button" class="notes-tab" data-tab="preview">Preview</button>
+            </div>
+          </div>
+          <div class="notes-content">
+            <textarea id="task-comment" placeholder="Supports **bold**, *italic*, - lists, [links](url), `code`..." rows="8"></textarea>
+            <div id="task-comment-preview" class="markdown-preview hidden"></div>
+          </div>
+          <span class="input-hint">Markdown supported</span>
+        </div>
+        <div class="modal-actions">
+          <button id="task-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="task-delete" class="btn btn-danger hidden">Delete</button>
+          <button id="task-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exercise Modal -->
+    <div id="exercise-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h3 id="exercise-modal-title">Add Exercise</h3>
+        <div class="input-group">
+          <label>Activity</label>
+          <input type="text" id="exercise-name" placeholder="e.g., Gym, Running, Basketball">
+        </div>
+        <div class="input-row">
+          <div class="input-group">
+            <label>Duration</label>
+            <input type="text" id="exercise-duration" placeholder="e.g., 45m, 1h">
+          </div>
+          <div class="input-group">
+            <label>Intensity</label>
+            <select id="exercise-intensity">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Notes</label>
+          <textarea id="exercise-comment" placeholder="Optional notes..." rows="2"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button id="exercise-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="exercise-delete" class="btn btn-danger hidden">Delete</button>
+          <button id="exercise-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h3>Settings</h3>
+        <div class="input-group">
+          <label>GitHub Token</label>
+          <input type="password" id="settings-token">
+        </div>
+        <div class="input-group">
+          <label>GitHub Username</label>
+          <input type="text" id="settings-owner">
+        </div>
+        <div class="input-group">
+          <label>Repository</label>
+          <input type="text" id="settings-repo">
+        </div>
+        <div class="input-group">
+          <label>Ollama URL (for AI)</label>
+          <input type="text" id="settings-ollama" placeholder="http://localhost:11434">
+        </div>
+        <div class="modal-actions">
+          <button id="settings-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="settings-logout" class="btn btn-danger">Logout</button>
+          <button id="settings-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/github.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/markdown-editor.js"></script>
+  <script src="js/views/daily.js"></script>
+  <script src="js/views/weekly.js"></script>
+  <script src="js/views/monthly.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
