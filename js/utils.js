@@ -8,9 +8,12 @@ const Utils = {
     return 't' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
   },
 
-  // Format date as YYYY-MM-DD
+  // Format date as YYYY-MM-DD (local time, not UTC)
   formatDateKey(date) {
-    return date.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   },
 
   // Format date for display (e.g., "February 21, 2026")
