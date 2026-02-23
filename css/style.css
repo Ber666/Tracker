@@ -1126,7 +1126,6 @@ body {
 }
 
 .timeline-task.done {
-  opacity: 0.6;
   border-left-color: var(--color-done);
 }
 
@@ -1182,11 +1181,12 @@ body {
   border-left-color: var(--color-primary);
 }
 
-/* Actual tasks: right column (40–100%), slight overlap */
+/* Actual tasks: right column (40–100%), slight overlap — always above planned */
 .timeline-task.scheduled.actual-side {
   left: 40%;
   right: 4px;
   border-left-color: var(--color-accent);
+  z-index: 10;
 }
 
 .timeline-task.scheduled:hover {
