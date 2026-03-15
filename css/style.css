@@ -308,10 +308,14 @@ body {
 }
 
 .btn-icon {
-  padding: var(--space-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
   background: transparent;
   color: var(--color-text-secondary);
   border-radius: var(--radius-md);
+  font-size: 13px;
 }
 
 .btn-icon:hover {
