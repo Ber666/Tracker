@@ -255,13 +255,32 @@ tracker checkin morning --mood 5 --note "Feeling great"
 
 ### `tracker tag`
 
-List all tags and tag groups (read-only — manage tags in the web app Settings).
+Manage tags and tag groups.
 
 ```bash
+# List all groups with their tags
 tracker tag list
+
+# Add a tag to an existing group (--group takes a group ID from tag list)
+tracker tag add "Breakfast" --group grp-1
+
+# Rename a tag
+tracker tag update tag-1 --name "Morning Run"
+
+# Delete a tag
+tracker tag delete tag-1
+
+# Add a new tag group
+tracker tag group-add "Exercise" --color "#E8654A"
+
+# Update a group
+tracker tag group-update grp-2 --name "Fitness" --color "#FF6B35"
+
+# Delete a group (also deletes all tags in it)
+tracker tag group-delete grp-2
 ```
 
-Output:
+`tag list` output:
 ```json
 [
   {
@@ -272,15 +291,6 @@ Output:
       { "id": "tag-1", "name": "Breakfast" },
       { "id": "tag-2", "name": "Lunch" },
       { "id": "tag-3", "name": "Dinner" }
-    ]
-  },
-  {
-    "id": "grp-2",
-    "name": "Exercise",
-    "color": "#E8654A",
-    "tags": [
-      { "id": "tag-4", "name": "Gym" },
-      { "id": "tag-5", "name": "Run" }
     ]
   }
 ]

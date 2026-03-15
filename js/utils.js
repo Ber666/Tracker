@@ -387,12 +387,49 @@ const Markdown = {
     html = html.replace(/^---$/gm, '<hr>');
     html = html.replace(/^\*\*\*$/gm, '<hr>');
 
-    // Unordered lists
-    html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+    // Unordered lists (supports 2-level nesting with 1+ space or tab indent)
+    {
+      const lines = html.split('\n');
+      const out = [];
+      let i = 0;
+      while (i < lines.length) {
+        const outer = lines[i].match(/^[-*] (.+)$/);
+        if (outer) {
+          const nested = [];
+          let j = i + 1;
+          while (j < lines.length && lines[j].match(/^[ \t]+[-*] /)) {
+            const m = lines[j].match(/^(?:[ \t]+)[-*] (.+)$/);
+            nested.push(`<li>${m[1]}</li>`);
+            j++;
+          }
+          const sub = nested.length ? `<ul>${nested.join('')}</ul>` : '';
+          out.push(`<li>${outer[1]}${sub}</li>`);
+          i = j;
+        } else {
+          out.push(lines[i]);
+          i++;
+        }
+      }
+      // Wrap consecutive top-level <li> in <ul>
+      const wrapped = [];
+      let k = 0;
+      while (k < out.length) {
+        if (out[k].startsWith('<li>')) {
+          const group = [];
+          while (k < out.length && out[k].startsWith('<li>')) group.push(out[k++]);
+          wrapped.push(`<ul>${group.join('')}</ul>`);
+        } else {
+          wrapped.push(out[k++]);
+        }
+      }
+      html = wrapped.join('\n');
+    }
 
-    // Ordered lists
-    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    // Ordered lists (use placeholder to avoid colliding with unordered <li>)
+    html = html.replace(/^\d+\. (.+)$/gm, '<__oli__>$1</__oli__>');
+    html = html.replace(/(<__oli__>.*<\/__oli__>\n?)+/g, match =>
+      `<ol>${match.replace(/<__oli__>/g, '<li>').replace(/<\/__oli__>/g, '</li>')}</ol>`
+    );
 
     // Checkboxes
     html = html.replace(/\[ \]/g, '<input type="checkbox" disabled>');
