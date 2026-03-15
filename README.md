@@ -158,10 +158,14 @@ data/
   "log": [
     {
       "id": "t2def456",
-      "text": "Unexpected meeting",
-      "time": "14:00",
-      "duration": "30m",
-      "notes": ""
+      "text": "Advisor meeting",
+      "startTime": "14:30",
+      "duration": "45m",
+      "notes": "Discussed chapter 3",
+      "tagIds": ["tag-id"],
+      "projectIds": ["proj-id"],
+      "plannedIds": ["t1abc123"],
+      "createdAt": "2026-03-14T14:30:00Z"
     }
   ],
   "sleep": {

@@ -114,14 +114,14 @@ class GitHubStorage {
   }
 
   async ensureDataStructure() {
-    // Try to get config file to check if structure exists
     const config = await this.getFile('data/config.json');
 
     if (!config) {
-      // Create initial structure
       await this.saveFile('data/config.json', {
-        version: 1,
-        createdAt: new Date().toISOString()
+        tagGroups: [],
+        tags: [],
+        projects: [],
+        updatedAt: new Date().toISOString(),
       }, 'Initialize data structure');
     }
 

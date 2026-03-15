@@ -97,7 +97,9 @@ class Storage {
   setProjects(projects) {
     const config = this.getConfig();
     config.projects = projects;
-    return this.setConfig(config);
+    config.configUpdatedAt = new Date().toISOString();
+    this.setConfig(config);
+    this.markForSync('config', 'main');
   }
 
   getTags() {
@@ -107,7 +109,9 @@ class Storage {
   setTags(tags) {
     const config = this.getConfig();
     config.tags = tags;
-    return this.setConfig(config);
+    config.configUpdatedAt = new Date().toISOString();
+    this.setConfig(config);
+    this.markForSync('config', 'main');
   }
 
   getTagGroups() {
@@ -117,7 +121,46 @@ class Storage {
   setTagGroups(groups) {
     const config = this.getConfig();
     config.tagGroups = groups;
-    return this.setConfig(config);
+    config.configUpdatedAt = new Date().toISOString();
+    this.setConfig(config);
+    this.markForSync('config', 'main');
+  }
+
+  // Pull tagGroups/tags/projects from GitHub config.json into localStorage.
+  // Only applies remote if it has an updatedAt newer than local configUpdatedAt.
+  async pullConfig() {
+    if (!this.github) return;
+    try {
+      const result = await this.github.getFile('data/config.json');
+      if (!result?.content?.updatedAt) return; // old placeholder without data — skip
+      const remote = result.content;
+      const local = this.getConfig();
+      const localTime = new Date(local.configUpdatedAt || 0).getTime();
+      const remoteTime = new Date(remote.updatedAt).getTime();
+      if (remoteTime > localTime) {
+        if (Array.isArray(remote.tagGroups)) local.tagGroups = remote.tagGroups;
+        if (Array.isArray(remote.tags))      local.tags      = remote.tags;
+        if (Array.isArray(remote.projects))  local.projects  = remote.projects;
+        local.configUpdatedAt = remote.updatedAt;
+        this.setConfig(local);
+      }
+    } catch (e) {
+      console.warn('Could not pull config:', e.message);
+    }
+  }
+
+  // Push tagGroups/tags/projects to GitHub config.json.
+  async syncConfig() {
+    const local = this.getConfig();
+    const now = new Date().toISOString();
+    local.configUpdatedAt = now;
+    this.setConfig(local);
+    await this.github.saveFile('data/config.json', {
+      tagGroups: local.tagGroups || [],
+      tags: local.tags || [],
+      projects: local.projects || [],
+      updatedAt: now,
+    }, 'Update config');
   }
 
   // ========================================
@@ -278,6 +321,8 @@ class Storage {
             await this.syncWeek(key);
           } else if (type === 'monthly') {
             await this.syncMonthlySummary(key);
+          } else if (type === 'config') {
+            await this.syncConfig();
           }
 
           this.syncQueue.delete(item);

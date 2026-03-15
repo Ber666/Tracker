@@ -2,7 +2,7 @@
 
 ## Overview
 
-A personal planning and journaling tool for daily tracking with weekly and monthly summaries. Uses GitHub as the database for cross-device sync. No backend, no third-party data services.
+A personal planning and journaling tool for daily tracking with stats and project views. Uses GitHub as the database for cross-device sync. No backend, no third-party data services.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -14,11 +14,7 @@ A personal planning and journaling tool for daily tracking with weekly and month
 │  │  │   ├── 01.json      (all January daily entries)        │  │
 │  │  │   ├── 02.json      (all February daily entries)       │  │
 │  │  │   └── ...                                              │  │
-│  │  ├── weekly/                                              │  │
-│  │  │   └── 2026-W08.json                                    │  │
-│  │  ├── monthly/                                             │  │
-│  │  │   └── 2026-02.json                                     │  │
-│  │  └── config.json      (tag groups, Google Client ID)      │  │
+│  │  └── config.json      (tag groups, projects, Google Client ID) │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
@@ -59,8 +55,8 @@ Tracker/
 │   ├── markdown-editor.js  # Reusable edit/preview markdown component
 │   └── views/
 │       ├── daily.js        # Daily view (timeline + check-ins)
-│       ├── weekly.js       # Weekly view
-│       └── monthly.js      # Monthly view
+│       ├── stats.js        # Stats view (charts + summaries)
+│       └── projects.js     # Projects view
 ├── sw.js                   # Service worker for offline / PWA
 ├── manifest.json           # PWA manifest
 ├── icons/                  # App icons (192px, 512px)
@@ -97,10 +93,14 @@ Tracker/
       "log": [
         {
           "id": "t2def456",
-          "text": "Unplanned advisor meeting",
-          "time": "14:30",
+          "text": "Advisor meeting",
+          "startTime": "14:30",
           "duration": "45m",
-          "notes": ""
+          "notes": "Discussed chapter 3",
+          "tagIds": ["tag-work"],
+          "projectIds": ["proj-abc"],
+          "plannedIds": ["t1abc123"],
+          "createdAt": "2026-03-14T14:30:00Z"
         }
       ],
       "sleep": {
@@ -158,9 +158,13 @@ Tracker/
 |-------|------|-------------|
 | `id` | string | Unique ID |
 | `text` | string | Task description |
-| `time` | string \| null | Time logged |
-| `duration` | string \| null | Duration |
-| `notes` | string | Notes |
+| `startTime` | string \| null | Time started ("14:30") |
+| `duration` | string \| null | Duration ("45m") |
+| `notes` | string | Markdown notes |
+| `tagIds` | string[] | Tag IDs from config |
+| `projectIds` | string[] | Project IDs |
+| `plannedIds` | string[] | IDs of linked planned tasks |
+| `createdAt` | string | ISO timestamp |
 
 #### Sleep Fields
 
@@ -192,32 +196,25 @@ All fields are integers 1–5.
 | `mood` | Evening mood |
 | `body` | Physical state at end of day |
 
-### Weekly Summary (`data/weekly/2026-W11.json`)
+### Config (`data/config.json`)
 
 ```json
 {
-  "week": "2026-W11",
-  "dateRange": "Mar 9–15, 2026",
-  "highlights": "Key accomplishments this week...",
-  "summary": "Reflection on the week...",
-  "nextWeekFocus": "Focus for next week...",
-  "sleep": { "avgDuration": "7h15m", "avgQuality": 3.8 },
-  "exercise": { "daysActive": 4, "totalDuration": "3h" },
-  "avgEnergy": 0,
-  "avgMood": 3.6
-}
-```
-
-### Monthly Summary (`data/monthly/2026-03.json`)
-
-```json
-{
-  "month": "2026-03",
-  "achievements": "What I achieved this month...",
-  "reflections": "Reflection on the month...",
-  "nextMonthGoals": "Goals for next month...",
-  "sleepTrends": { "avgDuration": "7h", "avgQuality": 3.7 },
-  "exerciseTrends": { "daysActive": 18, "totalDuration": "12h", "topActivities": [] }
+  "tagGroups": [
+    { "id": "grp-1", "name": "Meal", "color": "#56B870" },
+    { "id": "grp-2", "name": "Exercise", "color": "#E8654A" },
+    { "id": "grp-3", "name": "Misc", "color": "#7B8CDE" }
+  ],
+  "tags": [
+    { "id": "tag-1", "name": "Breakfast", "groupId": "grp-1" },
+    { "id": "tag-2", "name": "Lunch", "groupId": "grp-1" },
+    { "id": "tag-3", "name": "Gym", "groupId": "grp-2" },
+    { "id": "tag-4", "name": "Nap", "groupId": "grp-3" }
+  ],
+  "projects": [
+    { "id": "proj-abc", "name": "Thesis", "color": "#4A90D9", "description": "PhD thesis" }
+  ],
+  "googleClientId": "xxx.apps.googleusercontent.com"
 }
 ```
 
@@ -269,7 +266,7 @@ The daily view uses a two-column layout: timeline on the left, dashboard on the 
 │  └──────────────────────────────┘  └───────────────────────────┘  │
 │                                                                  │
 ├──────────────────────────────────────────────────────────────────┤
-│  [Daily]  [Weekly]  [Monthly]               [⟳ Sync] [⚙ Settings]│
+│  [Daily]  [Stats]  [Projects]               [⟳ Sync] [⚙ Settings]│
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -293,67 +290,46 @@ EVENING
   3. Sync to GitHub
 ```
 
-### Weekly View
+### Stats View
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  ◀ W10       [ Week 11: Mar 9–15 ]              W12 ▶           │
+│  [ 7 days ]  [ 30 days ]  [ 90 days ]                            │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  DAILY OVERVIEW                                                  │
-│  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┐             │
-│  │ Mon  │ Tue  │ Wed  │ Thu  │ Fri  │ Sat  │ Sun  │             │
-│  │  9   │ 10   │ 11   │ 12   │ 13   │ 14   │ 15   │             │
-│  │  😊  │  😐  │  😊  │  😊  │  ·   │  ·   │  ·   │             │
-│  │  7h  │  6h  │  7h  │  8h  │  -   │  -   │  -   │             │
-│  │ 3/4  │ 2/3  │ 4/4  │ 2/5  │      │      │      │             │
-│  └──────┴──────┴──────┴──────┴──────┴──────┴──────┘             │
-│  (click any day to jump to daily view)                           │
+│  Avg Sleep   Bed Time    Night Mood  Night Focus                 │
+│  7h12m±45m  23:14±22m    3.7         3.2                        │
+│  Exercise Days  Task Completion  Days Tracked                    │
+│  18             74% (89/120)     22                              │
 │                                                                  │
-│  STATS                                                           │
-│  Avg Sleep: 7h  Sleep Quality: 3.8  Exercise: 0/7               │
-│  Avg Energy: -  Avg Mood: 3.6  Tasks Done: 11/16                 │
+│  ┌─ Sleep Duration ──────┐  ┌─ Task Completion ────────────┐    │
+│  │  SVG bar chart        │  │  SVG bar chart               │    │
+│  └───────────────────────┘  └──────────────────────────────┘    │
 │                                                                  │
-│  HIGHLIGHTS                                                      │
-│  [markdown editor]                                               │
+│  ┌─ Sleep Quality ─┐  ┌─ Sharpness ──┐  ┌─ Morning Mood ─┐ ... │
+│  │  mini SVG chart │  │  mini chart  │  │  mini chart    │     │
+│  └─────────────────┘  └──────────────┘  └────────────────┘     │
+│  (8 rating mini-charts in 2-column grid)                        │
 │                                                                  │
-│  WEEKLY REFLECTION                                               │
-│  [markdown editor]                                               │
-│                                                                  │
-│  NEXT WEEK FOCUS                                                 │
-│  [markdown editor]                                               │
+│  ┌─ Exercise ─────────────┐  ┌─ Drinks & Snacks ────────────┐   │
+│  │  dot timeline per day  │  │  grouped by day, scrollable  │   │
+│  └────────────────────────┘  └──────────────────────────────┘   │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Monthly View
+### Projects View
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  ◀ Feb         [ March 2026 ]                    Apr ▶          │
+│  Projects                                      [ + New Project ] │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  CALENDAR                                                        │
-│  Mon Tue Wed Thu Fri Sat Sun                                     │
-│   2   3   4   5   6   7   8    ← click any day → daily view     │
-│   9  10  11  12  13  14  15    each day shows a plan             │
-│  16  17  18  19  20  21  22    completion bar (green/amber/red)  │
-│  23  24  25  26  27  28  29                                      │
-│  30  31                                                          │
-│                                                                  │
-│  HEALTH TRENDS                                                   │
-│  Avg Sleep: 6h45m  Sleep Quality: 3.7  Exercise Days: 18        │
-│  Total Exercise: 12h  Avg Energy: -  Avg Mood: 3.6              │
-│  Days Tracked: 22  Tasks Done: 89/120                            │
-│                                                                  │
-│  ACHIEVEMENTS                                                    │
-│  [markdown editor]                                               │
-│                                                                  │
-│  REFLECTIONS                                                     │
-│  [markdown editor]                                               │
-│                                                                  │
-│  NEXT MONTH GOALS                                                │
-│  [markdown editor]                                               │
+│  ┌─ Thesis ───────────────────────────────────────────────────┐  │
+│  │  PhD thesis writing and experiments            [▼ Tasks] [Edit] │
+│  │  42 tasks · 74% done · last 90 days   Last: 03-13         │  │
+│  │  ████████████████░░░░░░░░  (completion bar)               │  │
+│  └────────────────────────────────────────────────────────────┘  │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```

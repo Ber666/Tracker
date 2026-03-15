@@ -111,10 +111,11 @@ const App = {
     // Ensure data structure exists
     await this.github.ensureDataStructure();
 
-    // Pull latest data for current month
+    // Pull latest data for current month and config
     const monthKey = Utils.formatMonthKey(new Date());
     try {
       await storage.pull(monthKey);
+      await storage.pullConfig();
     } catch (error) {
       console.warn('Could not pull initial data:', error);
     }
