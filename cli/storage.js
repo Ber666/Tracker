@@ -3,6 +3,7 @@ import { loadConfig } from './config.js';
 
 let _gh = null;
 const _monthCache = new Map();
+const _dirtyMonths = new Set();
 let _appConfig = null;
 
 function gh() {
@@ -29,6 +30,7 @@ export async function getMonthData(monthKey) {
 export async function saveMonthData(monthKey, data) {
   await gh().saveFile(monthPath(monthKey), data, `Update ${monthKey}`);
   _monthCache.set(monthKey, data);
+  _dirtyMonths.delete(monthKey);
 }
 
 export async function getEntry(dateKey) {
@@ -37,12 +39,31 @@ export async function getEntry(dateKey) {
   return data.entries[dateKey] ?? null;
 }
 
+// Write immediately (default, single-command behaviour)
 export async function setEntry(dateKey, entry) {
   const mk = dateKey.slice(0, 7);
   const data = await getMonthData(mk);
   entry.updatedAt = new Date().toISOString();
   data.entries[dateKey] = entry;
   await saveMonthData(mk, data);
+}
+
+// Update in-memory only; call flushEntries() to write all at once
+export async function setEntryDeferred(dateKey, entry) {
+  const mk = dateKey.slice(0, 7);
+  const data = await getMonthData(mk);
+  entry.updatedAt = new Date().toISOString();
+  data.entries[dateKey] = entry;
+  _monthCache.set(mk, data);
+  _dirtyMonths.add(mk);
+}
+
+// Write all dirty months in one pass (one GitHub commit per month)
+export async function flushEntries() {
+  for (const mk of _dirtyMonths) {
+    const data = _monthCache.get(mk);
+    if (data) await saveMonthData(mk, data);
+  }
 }
 
 export async function getAppConfig() {

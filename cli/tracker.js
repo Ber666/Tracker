@@ -10,6 +10,7 @@ import * as checkinCmd from './commands/checkin.js';
 import * as tagCmd     from './commands/tag.js';
 import * as projectCmd from './commands/project.js';
 import * as syncCmd    from './commands/sync.js';
+import * as batchCmd   from './commands/batch.js';
 
 const COMMANDS = {
   config:  configCmd,
@@ -21,6 +22,7 @@ const COMMANDS = {
   tag:     tagCmd,
   project: projectCmd,
   sync:    syncCmd,
+  batch:   batchCmd,
 };
 
 const [,, cmd, ...rest] = process.argv;

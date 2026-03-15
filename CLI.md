@@ -337,6 +337,45 @@ tracker project delete proj-abc
 
 ---
 
+### `tracker batch`
+
+Write multiple entries in a single GitHub commit. Accepts a JSON array via argument or stdin. Each element is an operation object with a `cmd` field plus the same fields as the individual commands.
+
+```bash
+tracker batch '[
+  {"cmd": "log",     "text": "morning run",     "time": "07:30", "duration": "30m"},
+  {"cmd": "log",     "text": "standup meeting",  "time": "09:00", "duration": "30m"},
+  {"cmd": "task",    "text": "review PR #42",    "time": "10:00"},
+  {"cmd": "sleep",   "bed": "23:30", "wake": "07:00"},
+  {"cmd": "checkin", "morning": "Feeling good today"}
+]'
+
+# Pipe from stdin
+echo '[{"cmd":"log","text":"lunch","time":"12:30","duration":"45m"}]' | tracker batch
+```
+
+**Operation fields:**
+
+| `cmd`     | Required fields | Optional fields |
+|-----------|----------------|-----------------|
+| `log`     | `text`         | `time`, `duration`, `notes`, `tags`, `project`, `plannedIds`, `date` |
+| `task`    | `text`         | `time`, `duration`, `notes`, `status`, `tags`, `project`, `date` |
+| `sleep`   | —              | `bed`, `wake`, `nap`, `date` |
+| `checkin` | —              | `morning`, `night`, `date` |
+
+`date` defaults to today. All operations targeting the same date are batched into **one GitHub commit**.
+
+Output is an array of per-operation results:
+```json
+[
+  {"index": 0, "ok": true, "data": {"id": "t1abc", "text": "morning run", ...}},
+  {"index": 1, "ok": true, "data": {"id": "t2def", ...}},
+  {"index": 2, "ok": false, "error": "Tag ID not found: \"xyz\""}
+]
+```
+
+---
+
 ### `tracker sync`
 
 ```bash
