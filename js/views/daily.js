@@ -520,7 +520,7 @@ const DailyView = {
       : allTags.filter(t => t.name.toLowerCase().includes('nap')).map(t => t.id);
 
     const autoNaps = [];
-    [...(this.currentEntry.planned || []), ...(this.currentEntry.log || [])].forEach(task => {
+    (this.currentEntry.log || []).forEach(task => {
       if ((task.tagIds || []).some(id => napTagIds.includes(id))) {
         autoNaps.push({
           time: task.scheduledTime || task.startTime || '',
@@ -602,7 +602,7 @@ const DailyView = {
     const exTagById = Object.fromEntries(allTags.filter(t => exTagIds.includes(t.id)).map(t => [t.id, t]));
 
     const autoEx = [];
-    [...(this.currentEntry.planned || []), ...(this.currentEntry.log || [])].forEach(task => {
+    (this.currentEntry.log || []).forEach(task => {
       const matchedId = (task.tagIds || []).find(id => exTagIds.includes(id));
       if (matchedId) autoEx.push({
         name: task.text || exTagById[matchedId]?.name || '',
@@ -659,15 +659,13 @@ const DailyView = {
     const mealTagById = Object.fromEntries(allTags.filter(t => mealTagIds.includes(t.id)).map(t => [t.id, t]));
 
     const autoMeals = [];
-    [...(this.currentEntry.planned || []), ...(this.currentEntry.log || [])].forEach(task => {
+    (this.currentEntry.log || []).forEach(task => {
       const matchedTagId = (task.tagIds || []).find(id => mealTagIds.includes(id));
       if (matchedTagId) {
-        const tagName = mealTagById[matchedTagId]?.name || '';
-        const name = task.text || tagName;
+        const tagName = mealTagById[matchedTagId]?.name || task.text || '';
         autoMeals.push({
-          name,
+          name: tagName,
           time: task.scheduledTime || task.startTime || '',
-          tag: name.toLowerCase() !== tagName.toLowerCase() ? tagName : '',
           note: task.notes || '',
         });
       }
@@ -677,7 +675,7 @@ const DailyView = {
     autoMeals.forEach(m => {
       html += `<div class="day-item meal-item-auto">
         ${m.time ? `<span class="day-item-time">${m.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(m.name)}${m.tag ? ` <small>(${this.escapeHtml(m.tag)})</small>` : ''}${m.note ? ` <span class="day-item-note">${this.escapeHtml(m.note)}</span>` : ''}</span>
+        <span class="day-item-text">${this.escapeHtml(m.name)}${m.note ? ` <span class="day-item-note">${this.escapeHtml(m.note)}</span>` : ''}</span>
       </div>`;
     });
     meals.forEach((m, i) => {
