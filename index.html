@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="screen">
+      <div class="setup-container">
+        <div class="setup-header">
+          <h1>Tracker</h1>
+          <p class="subtitle">Plan your day. Track your progress. Reflect and grow.</p>
+        </div>
+
+        <div class="setup-form">
+          <div class="input-group">
+            <label for="github-token">GitHub Personal Access Token</label>
+            <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
+            <span class="input-hint">Create at github.com/settings/tokens (scope: repo)</span>
+          </div>
+
+          <div class="input-group">
+            <label for="github-owner">GitHub Username</label>
+            <input type="text" id="github-owner" placeholder="your-username">
+          </div>
+
+          <div class="input-group">
+            <label for="github-repo">Repository Name</label>
+            <input type="text" id="github-repo" placeholder="my-journal-data">
+          </div>
+
+          <button id="setup-submit" class="btn btn-primary">Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-app" class="screen hidden">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-content">
+          <h1 class="app-title">Tracker</h1>
+          <div class="header-actions">
+            <button id="sync-btn" class="btn btn-icon" title="Sync with GitHub">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c-1.657 0-3-4.03-3-9s1.343-9 3-9m0 18c1.657 0 3-4.03 3-9s-1.343-9-3-9"/>
+              </svg>
+            </button>
+            <button id="settings-btn" class="btn btn-icon" title="Settings">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+          <button class="nav-tab active" data-view="daily">Daily</button>
+          <button class="nav-tab" data-view="stats">Stats</button>
+          <button class="nav-tab" data-view="projects">Projects</button>
+        </nav>
+      </header>
+
+      <!-- Main Content -->
+      <main class="app-main">
+        <!-- Daily View -->
+        <section id="daily-view" class="view active">
+          <!-- Date Navigation -->
+          <div class="date-nav">
+            <button id="prev-day" class="btn btn-ghost">&larr;</button>
+            <div class="date-display">
+              <span id="current-date">February 21, 2026</span>
+              <span id="day-of-week">Friday</span>
+            </div>
+            <button id="next-day" class="btn btn-ghost">&rarr;</button>
+            <button id="today-btn" class="btn btn-secondary">Today</button>
+          </div>
+
+          <!-- Two-column dashboard layout -->
+          <div class="daily-layout">
+
+            <!-- Left: Timeline / List -->
+            <div class="daily-col-left">
+              <div class="section section-timeline">
+                <div class="section-header">
+                  <div class="view-toggle">
+                    <button class="toggle-btn active" data-task-view="timeline">Timeline</button>
+                    <button class="toggle-btn" data-task-view="list">List</button>
+                  </div>
+                  <div class="section-actions">
+                    <button id="import-gcal-btn" class="btn-link btn-link-secondary" title="Import from Google Calendar">&#8645; Import</button>
+                    <button id="add-planned-btn" class="btn-link">+ Planned</button>
+                    <button id="add-log-btn" class="btn-link">+ Log</button>
+                  </div>
+                </div>
+
+                <!-- Timeline view -->
+                <div id="tasks-timeline-view" class="active">
+                  <div class="timeline-container">
+                    <div class="timeline-schedule">
+                      <div id="timeline-grid" class="timeline-grid"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- List view -->
+                <div id="tasks-list-view">
+                  <div id="tasks-container" class="tasks-container">
+                    <div class="task-group">
+                      <div class="task-group-header">
+                        <h3 class="task-group-label">Planned</h3>
+                      </div>
+                      <div id="planned-tasks" class="task-list"></div>
+                    </div>
+                    <div class="task-group">
+                      <div class="task-group-header">
+                        <h3 class="task-group-label">Log</h3>
+                      </div>
+                      <div id="unplanned-tasks" class="task-list"></div>
+                    </div>
+                  </div>
+                  <div id="plan-vs-reality" class="plan-contrast hidden">
+                    <div class="contrast-header">Plan vs Reality</div>
+                    <div id="contrast-breakdown"></div>
+                    <div class="contrast-reflection">
+                      <label>What caused the shift?</label>
+                      <textarea id="plan-shift-reason" placeholder="Reflect on why the day went differently from the plan..." rows="2"></textarea>
+                    </div>
+                  </div>
+                  <div id="tasks-summary" class="tasks-summary"></div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Hidden proxy for legacy add-task-btn reference -->
+            <div style="display:none"><button id="add-task-btn"></button></div>
+
+            <!-- Right: Dashboard sections -->
+            <div class="daily-col-right">
+
+              <!-- Morning Check-in -->
+              <div class="section">
+                <div class="section-header"><h2>Morning Check-in</h2></div>
+
+                <!-- Sleep row: Bed / Wake / Duration -->
+                <div class="morning-sleep-row">
+                  <span class="morning-time-item"><span class="morning-time-label">Bed</span><input type="time" id="bed-time" class="time-input"></span>
+                  <span class="morning-time-item"><span class="morning-time-label">Wake</span><input type="time" id="wake-time" class="time-input"></span>
+                  <span class="morning-time-item morning-duration"><span class="morning-time-label">Duration</span><span id="sleep-duration" class="computed-value">--</span></span>
+                </div>
+
+                <!-- Morning feel ratings -->
+                <div class="morning-feel-row">
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="morning-quality" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Sleep Quality</span>
+                  </div>
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="morning-clarity" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Sharpness</span>
+                  </div>
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="morning-mood" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Mood</span>
+                  </div>
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="morning-fatigue" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Body</span>
+                  </div>
+                </div>
+
+                <!-- Morning message -->
+                <div class="input-group" style="margin-top: var(--space-sm)">
+                  <textarea id="morning-message" placeholder="Good morning! What's the plan for today?" rows="3"></textarea>
+                </div>
+              </div>
+
+              <!-- Check-in Panel -->
+              <div class="section checkin-section">
+                <div class="section-header"><h2>Vitals</h2></div>
+
+                <!-- Naps -->
+                <div class="checkin-module checkin-nap">
+                  <div class="checkin-module-title">💤 Naps
+                    <button type="button" id="add-nap-btn" class="btn-link">+ Add</button>
+                  </div>
+                  <div id="nap-list" class="day-item-list"></div>
+                  <div id="nap-add-form" class="day-add-form hidden">
+                    <input type="time" id="nap-time-input">
+                    <input type="text" id="nap-duration-input" placeholder="duration (e.g. 20m)" class="day-add-text">
+                    <button type="button" id="nap-add-save" class="btn btn-small">Add</button>
+                    <button type="button" id="nap-add-cancel" class="btn-link">Cancel</button>
+                  </div>
+                </div>
+
+                <!-- Exercise -->
+                <div class="checkin-module checkin-exercise">
+                  <div class="checkin-module-title">🏃 Exercise
+                    <button type="button" id="add-exercise-btn" class="btn-link">+ Add</button>
+                  </div>
+                  <div id="exercise-list" class="day-item-list"></div>
+                  <div id="exercise-add-form" class="day-add-form hidden">
+                    <input type="time" id="exercise-time-input">
+                    <input type="text" id="exercise-name-input" placeholder="what? (e.g. gym, run)" class="day-add-text">
+                    <input type="text" id="exercise-duration-input" placeholder="duration (e.g. 45m)" class="day-add-text">
+                    <button type="button" id="exercise-add-save" class="btn btn-small">Add</button>
+                    <button type="button" id="exercise-add-cancel" class="btn-link">Cancel</button>
+                  </div>
+                </div>
+
+                <!-- Meals -->
+                <div class="checkin-module checkin-meals">
+                  <div class="checkin-module-title">🍽 Meals
+                    <button type="button" id="add-meal-btn" class="btn-link">+ Add</button>
+                  </div>
+                  <div id="meal-list" class="day-item-list"></div>
+                  <div id="meal-add-form" class="day-add-form hidden">
+                    <input type="time" id="meal-time-input">
+                    <input type="text" id="meal-name-input" placeholder="what?" class="day-add-text">
+                    <button type="button" id="meal-add-save" class="btn btn-small">Add</button>
+                    <button type="button" id="meal-add-cancel" class="btn-link">Cancel</button>
+                  </div>
+                </div>
+
+                <!-- Drinks & Snacks -->
+                <div class="checkin-module checkin-drinks">
+                  <div class="checkin-module-title">☕ Drinks & Snacks
+                    <button type="button" id="add-drink-btn" class="btn-link">+ Add</button>
+                  </div>
+                  <div id="drink-list" class="day-item-list"></div>
+                  <div id="drink-add-form" class="day-add-form hidden">
+                    <input type="text" id="drink-name-input" placeholder="what?" class="day-add-text">
+                    <button type="button" id="drink-add-save" class="btn btn-small">Add</button>
+                    <button type="button" id="drink-add-cancel" class="btn-link">Cancel</button>
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div id="day-notes-editor"></div>
+
+              </div>
+
+              <!-- Night Check-in -->
+              <div class="section">
+                <div class="section-header">
+                  <h2>Night Check-in</h2>
+                </div>
+                <div class="morning-feel-row">
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="night-focus" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Focus</span>
+                  </div>
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="night-social" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Social</span>
+                  </div>
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="night-mood" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Mood</span>
+                  </div>
+                  <div class="morning-feel-item">
+                    <div class="rating-input" id="night-body" data-value="0" data-max="5"></div>
+                    <span class="morning-feel-label">Body</span>
+                  </div>
+                </div>
+                <div id="night-message-editor"></div>
+              </div>
+
+            </div><!-- end daily-col-right -->
+          </div><!-- end daily-layout -->
+        </section>
+
+        <!-- Stats View -->
+        <section id="stats-view" class="view">
+          <div class="stats-range-bar">
+            <button class="range-btn active" data-range="7">7 days</button>
+            <button class="range-btn" data-range="30">30 days</button>
+            <button class="range-btn" data-range="90">90 days</button>
+          </div>
+
+          <div class="section">
+            <div id="stats-summary" class="stats-grid"></div>
+          </div>
+
+          <div class="section">
+            <div class="stats-two-col">
+              <div class="stats-half">
+                <div class="stats-chart-title">Sleep Duration</div>
+                <div class="stats-chart-legend">
+                  <span class="stats-legend-item"><span class="stats-legend-dot" style="background:#1BA87A"></span>≥ 8h</span>
+                  <span class="stats-legend-item"><span class="stats-legend-dot" style="background:#006A96"></span>6.5–8h</span>
+                  <span class="stats-legend-item"><span class="stats-legend-dot" style="background:#C8323A"></span>&lt; 6.5h</span>
+                </div>
+                <div id="stats-sleep-chart" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-half">
+                <div class="stats-chart-title">Task Completion</div>
+                <div id="stats-tasks-chart" class="stats-chart-wrap"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="stats-chart-title">Ratings</div>
+            <div class="stats-ratings-grid">
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Sleep Quality</div>
+                <div id="stats-rating-sleep-quality" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Sharpness</div>
+                <div id="stats-rating-sharpness" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Morning Mood</div>
+                <div id="stats-rating-morning-mood" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Morning Body</div>
+                <div id="stats-rating-morning-body" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Focus</div>
+                <div id="stats-rating-focus" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Social</div>
+                <div id="stats-rating-social" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Night Mood</div>
+                <div id="stats-rating-night-mood" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-mini-chart">
+                <div class="stats-mini-title">Night Body</div>
+                <div id="stats-rating-night-body" class="stats-chart-wrap"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="stats-two-col">
+              <div class="stats-half">
+                <div class="stats-chart-title">Exercise</div>
+                <div id="stats-exercise-row" class="stats-chart-wrap"></div>
+              </div>
+              <div class="stats-half">
+                <div class="stats-chart-title">Drinks &amp; Snacks</div>
+                <div id="stats-drinks-list" class="stats-drinks-list"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Projects View -->
+        <section id="projects-view" class="view">
+          <div class="projects-toolbar">
+            <button id="add-project-view-btn" class="btn btn-secondary btn-small">+ New Project</button>
+          </div>
+
+          <div id="new-project-form" class="project-new-form hidden">
+            <input type="text" id="new-project-name-input" placeholder="Project name" maxlength="30">
+            <div id="new-project-colors" class="color-swatches" style="margin:8px 0"></div>
+            <textarea id="new-project-desc-input" placeholder="Description or goals…" rows="2"></textarea>
+            <div class="project-edit-actions">
+              <button id="new-project-save" class="btn btn-primary btn-small">Add</button>
+              <button id="new-project-cancel" class="btn-link">Cancel</button>
+            </div>
+          </div>
+
+          <div id="projects-view-list"></div>
+        </section>
+      </main>
+
+      <!-- Status Bar -->
+      <div id="status-bar" class="status-bar">
+        <span id="status-text">Ready</span>
+        <span id="last-sync">Last sync: Never</span>
+      </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h3 id="task-modal-title">Add Planned Task</h3>
+        <input type="hidden" id="task-type" value="planned">
+        <div class="input-group">
+          <label>Task</label>
+          <input type="text" id="task-text" placeholder="What do you need to do?">
+        </div>
+        <div class="input-row input-row-3">
+          <div class="input-group">
+            <label>Date</label>
+            <input type="date" id="task-date">
+          </div>
+          <div class="input-group">
+            <label id="task-time-label">Scheduled</label>
+            <input type="time" id="task-scheduled" placeholder="09:00">
+          </div>
+          <div class="input-group">
+            <label>Duration</label>
+            <input type="text" id="task-time" placeholder="e.g., 30m, 2h">
+          </div>
+        </div>
+        <div class="input-row" id="task-status-row">
+          <div class="input-group">
+            <label>Status</label>
+            <select id="task-progress">
+              <option value="not-started">Not Started</option>
+              <option value="in-progress">In Progress</option>
+              <option value="done">Done</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="input-group" id="link-to-planned-group" style="display:none">
+          <label>Links to planned tasks</label>
+          <select id="task-linked-plan" multiple size="3">
+          </select>
+          <span class="input-hint">Ctrl/Cmd+click to select multiple (or none for standalone log entry)</span>
+        </div>
+        <div class="input-row input-row-2">
+          <div class="input-group">
+            <label>Project</label>
+            <div id="task-project-chips" class="chip-selector"></div>
+            <div id="task-new-project-form" class="inline-add-form hidden">
+              <input type="text" id="task-new-project-name" placeholder="Project name" maxlength="30">
+              <div id="task-new-project-colors" class="color-swatches"></div>
+              <div class="inline-add-actions">
+                <button type="button" id="task-new-project-save" class="btn btn-sm btn-primary">Add</button>
+                <button type="button" id="task-new-project-cancel" class="btn btn-sm btn-ghost">Cancel</button>
+              </div>
+            </div>
+            <button type="button" id="task-add-project-btn" class="btn-inline-add">+ New project</button>
+          </div>
+          <div class="input-group">
+            <label>Tags</label>
+            <div id="task-tag-chips" class="chip-selector-grouped"></div>
+          </div>
+        </div>
+        <div id="task-gcal-info" class="task-gcal-info hidden">
+          <div class="task-gcal-info-label">From Google Calendar</div>
+          <div id="task-gcal-description-text" class="task-gcal-info-text"></div>
+        </div>
+        <div class="input-group notes-group">
+          <div class="notes-header">
+            <label>Notes</label>
+            <div class="notes-tabs">
+              <button type="button" class="notes-tab active" data-tab="edit">Edit</button>
+              <button type="button" class="notes-tab" data-tab="preview">Preview</button>
+            </div>
+          </div>
+          <div class="notes-content">
+            <textarea id="task-comment" placeholder="Supports **bold**, *italic*, - lists, [links](url), `code`..." rows="8"></textarea>
+            <div id="task-comment-preview" class="markdown-preview hidden"></div>
+          </div>
+          <span class="input-hint">Markdown supported</span>
+        </div>
+        <div class="modal-actions">
+          <button id="task-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="task-delete" class="btn btn-danger hidden">Delete</button>
+          <button id="task-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Calendar Import Modal -->
+    <div id="gcal-import-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content gcal-import-content">
+        <h3>Import from Google Calendar</h3>
+
+        <!-- No client ID configured -->
+        <div id="gcal-setup-msg" class="gcal-setup-msg hidden">
+          <p>Add your <strong>Google Client ID</strong> in Settings to connect directly to Google Calendar.</p>
+          <button id="gcal-open-settings-btn" class="btn-link">Open Settings →</button>
+        </div>
+
+        <!-- Has client ID, not yet connected -->
+        <button id="gcal-connect-btn" class="btn btn-primary gcal-connect-btn hidden">Connect Google Calendar</button>
+
+        <!-- Connected state -->
+        <div id="gcal-connected-bar" class="gcal-connected-bar hidden">
+          <span class="gcal-connected-label">Connected to Google Calendar</span>
+          <button id="gcal-reconnect-btn" class="btn-link">Reconnect</button>
+        </div>
+
+        <!-- Refresh button (shown when connected) -->
+        <div id="gcal-date-selector" class="gcal-date-selector hidden">
+          <button id="gcal-filter-btn" class="btn btn-secondary btn-small">Refresh</button>
+        </div>
+
+        <div id="gcal-events-list" class="gcal-events-list hidden">
+          <div class="gcal-events-header">
+            <span id="gcal-events-count" class="gcal-events-count"></span>
+            <button id="gcal-select-all" class="btn-link">Select all</button>
+          </div>
+          <div id="gcal-events-items"></div>
+        </div>
+
+        <div id="gcal-no-events" class="gcal-no-events hidden">
+          No events found for this day.
+        </div>
+
+        <!-- ICS file fallback -->
+        <details class="gcal-file-fallback" id="gcal-file-details">
+          <summary>Or upload an ICS file</summary>
+          <div class="input-group" style="margin-top:8px">
+            <input type="file" id="gcal-file-input" accept=".ics,.ical">
+            <span class="input-hint">Export from Google Calendar → Settings → Export</span>
+          </div>
+        </details>
+
+        <div class="modal-actions">
+          <button id="gcal-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="gcal-import-btn" class="btn btn-primary hidden">Import Selected</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h3>Settings</h3>
+        <div class="input-group">
+          <label>GitHub Token</label>
+          <input type="password" id="settings-token">
+        </div>
+        <div class="input-group">
+          <label>GitHub Username</label>
+          <input type="text" id="settings-owner">
+        </div>
+        <div class="input-group">
+          <label>Repository</label>
+          <input type="text" id="settings-repo">
+        </div>
+
+        <div class="input-group">
+          <label>Google Client ID (for Calendar import)</label>
+          <input type="text" id="settings-google-client-id" placeholder="xxxx.apps.googleusercontent.com">
+          <span class="input-hint">Create at console.cloud.google.com → APIs &amp; Services → Credentials → OAuth 2.0 Client ID (Web app). Add this page's URL as an authorized JavaScript origin and redirect URI.</span>
+        </div>
+        <div class="settings-ref-section">
+          <div class="settings-ref-header">
+            <label>Tags</label>
+          </div>
+          <div id="settings-tag-groups"></div>
+          <div class="ref-data-add-row" style="margin-top:10px">
+            <div class="ref-data-add-colors" id="settings-tag-group-colors"></div>
+            <input type="text" id="settings-tag-group-name" placeholder="New group name" class="ref-data-add-input">
+            <button type="button" id="settings-tag-group-add-btn" class="btn btn-small">Add group</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="settings-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="settings-logout" class="btn btn-danger">Logout</button>
+          <button id="settings-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/github.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/markdown-editor.js"></script>
+  <script src="js/views/daily.js"></script>
+  <script src="js/views/stats.js"></script>
+  <script src="js/views/projects.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

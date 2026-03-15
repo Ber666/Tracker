@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#EEF3F8"/>
+      <stop offset="100%" stop-color="#D6E6F2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle dot grid -->
+  <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="1" fill="#182B49" opacity="0.06"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- Left: text block -->
+  <!-- Title -->
+  <text x="100" y="240" font-family="Inter, -apple-system, sans-serif" font-size="96" font-weight="800" fill="#182B49" letter-spacing="-3">Tracker</text>
+
+  <!-- Accent underline -->
+  <rect x="100" y="258" width="200" height="5" rx="2.5" fill="#006A96"/>
+
+  <!-- Subtitle -->
+  <text x="100" y="310" font-family="Inter, -apple-system, sans-serif" font-size="22" fill="#3A5478">Plan · Log · Reflect</text>
+
+  <!-- Tagline -->
+  <text x="100" y="356" font-family="Inter, -apple-system, sans-serif" font-size="16" fill="#7A9AB2">For PhD students (and anyone) who wonder where the day went.</text>
+
+  <!-- Feature pills row -->
+  <!-- Pill 1 -->
+  <rect x="100" y="410" width="136" height="32" rx="16" fill="#DCF0F8"/>
+  <text x="168" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#006A96" text-anchor="middle">GitHub sync</text>
+
+  <!-- Pill 2 -->
+  <rect x="248" y="410" width="188" height="32" rx="16" fill="#FEF3D9"/>
+  <text x="342" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#C69214" text-anchor="middle">Google Calendar</text>
+
+  <!-- Pill 3 -->
+  <rect x="448" y="410" width="136" height="32" rx="16" fill="#E8F8F3"/>
+  <text x="516" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#1BA87A" text-anchor="middle">iPhone PWA</text>
+
+  <!-- Pill 4 -->
+  <rect x="596" y="410" width="180" height="32" rx="16" fill="#FFFFFF" opacity="0.7"/>
+  <text x="686" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#7A9AB2" text-anchor="middle">AI · coming soon</text>
+
+  <!-- Right: decorative timeline illustration -->
+  <!-- Vertical separator -->
+  <line x1="860" y1="80" x2="860" y2="550" stroke="#182B49" stroke-width="1" opacity="0.08"/>
+
+  <!-- Day label -->
+  <text x="960" y="118" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#7A9AB2" text-anchor="middle" letter-spacing="2">TUESDAY · MAR 10</text>
+
+  <!-- 09:00 — done -->
+  <text x="900" y="172" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#7A9AB2" text-anchor="end">09:00</text>
+  <rect x="910" y="158" width="200" height="26" rx="6" fill="#1BA87A" opacity="0.85"/>
+  <text x="1010" y="175" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle" font-weight="500">CS336 review</text>
+  <circle cx="1126" cy="171" r="10" fill="#1BA87A" opacity="0.2"/>
+  <path d="M1121 171 L1124 174 L1131 167" stroke="#1BA87A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- 11:00 — done -->
+  <text x="900" y="220" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#7A9AB2" text-anchor="end">11:00</text>
+  <rect x="910" y="206" width="150" height="26" rx="6" fill="#1BA87A" opacity="0.85"/>
+  <text x="985" y="223" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle" font-weight="500">Lab meeting</text>
+  <circle cx="1126" cy="219" r="10" fill="#1BA87A" opacity="0.2"/>
+  <path d="M1121 219 L1124 222 L1131 215" stroke="#1BA87A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- 14:00 — in progress -->
+  <text x="900" y="268" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#7A9AB2" text-anchor="end">14:00</text>
+  <rect x="910" y="254" width="240" height="26" rx="6" fill="#D4870A" opacity="0.85"/>
+  <text x="1030" y="271" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle" font-weight="500">Write related work</text>
+
+  <!-- 16:30 — not started -->
+  <text x="900" y="316" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#7A9AB2" text-anchor="end">16:30</text>
+  <rect x="910" y="302" width="120" height="26" rx="6" fill="#FFFFFF"/>
+  <rect x="910" y="302" width="120" height="26" rx="6" fill="none" stroke="#C8D8E8" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="970" y="319" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#7A9AB2" text-anchor="middle">Advisor email</text>
+
+  <!-- Current time line -->
+  <line x1="910" y1="335" x2="1150" y2="335" stroke="#C8323A" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+  <circle cx="910" cy="335" r="3" fill="#C8323A" opacity="0.7"/>
+  <text x="920" y="350" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#C8323A" opacity="0.6">now</text>
+
+  <!-- Stats row at bottom -->
+  <line x1="880" y1="390" x2="1160" y2="390" stroke="#C8D8E8" stroke-width="1"/>
+
+  <!-- Sleep -->
+  <text x="940" y="420" font-family="Inter, -apple-system, sans-serif" font-size="11" fill="#7A9AB2" text-anchor="middle" letter-spacing="1">SLEEP</text>
+  <text x="940" y="450" font-family="Inter, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#182B49" text-anchor="middle">7h20</text>
+
+  <!-- Energy -->
+  <text x="1040" y="420" font-family="Inter, -apple-system, sans-serif" font-size="11" fill="#7A9AB2" text-anchor="middle" letter-spacing="1">ENERGY</text>
+  <text x="1040" y="450" font-family="Inter, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#C69214" text-anchor="middle">7/10</text>
+
+  <!-- Mood -->
+  <text x="1140" y="420" font-family="Inter, -apple-system, sans-serif" font-size="11" fill="#7A9AB2" text-anchor="middle" letter-spacing="1">MOOD</text>
+  <text x="1140" y="450" font-family="Inter, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#1BA87A" text-anchor="middle">8/10</text>
+
+  <!-- Synced indicator -->
+  <circle cx="910" cy="500" r="4" fill="#1BA87A"/>
+  <text x="922" y="504" font-family="Inter, -apple-system, sans-serif" font-size="12" fill="#7A9AB2">synced to GitHub</text>
+
+</svg>

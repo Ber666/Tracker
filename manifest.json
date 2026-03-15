@@ -1,0 +1,28 @@
+{
+  "name": "Tracker - Daily Journal",
+  "short_name": "Tracker",
+  "description": "Plan your day. Track your progress. Reflect and grow.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Today's Entry",
+      "short_name": "Today",
+      "description": "Open today's journal entry",
+      "url": "/?view=daily",
+      "icons": [{ "src": "icons/icon.svg", "sizes": "any" }]
+    }
+  ]
+}
