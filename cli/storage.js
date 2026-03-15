@@ -53,6 +53,7 @@ export async function getAppConfig() {
 }
 
 export async function saveAppConfig(cfg) {
+  cfg.updatedAt = new Date().toISOString();
   await gh().saveFile('data/config.json', cfg, 'Update config');
   _appConfig = cfg;
 }

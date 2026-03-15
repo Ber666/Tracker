@@ -176,6 +176,8 @@ const App = {
         statusText.textContent = 'Synced successfully';
         this.updateLastSyncDisplay();
         this.updatePendingIndicator();
+        // Refresh current view so pulled config changes (tags/projects) appear
+        DailyView.loadDate(DailyView.currentDate);
       } else {
         statusText.textContent = result.message;
       }

@@ -127,22 +127,50 @@ class Storage {
   }
 
   // Pull tagGroups/tags/projects from GitHub config.json into localStorage.
-  // Only applies remote if it has an updatedAt newer than local configUpdatedAt.
+  // Strategy:
+  //   - If remote updatedAt is newer → remote wins (full replace)
+  //   - Otherwise → merge additions: any remote item missing from local is added
+  //     (handles CLI changes made before the CLI started stamping updatedAt)
   async pullConfig() {
     if (!this.github) return;
     try {
       const result = await this.github.getFile('data/config.json');
-      if (!result?.content?.updatedAt) return; // old placeholder without data — skip
+      if (!result?.content) return;
       const remote = result.content;
+      // Skip completely empty/old placeholder with no array fields
+      if (!Array.isArray(remote.tagGroups) && !Array.isArray(remote.tags) && !Array.isArray(remote.projects)) return;
+
       const local = this.getConfig();
       const localTime = new Date(local.configUpdatedAt || 0).getTime();
-      const remoteTime = new Date(remote.updatedAt).getTime();
+      const remoteTime = new Date(remote.updatedAt || 0).getTime();
+
       if (remoteTime > localTime) {
+        // Remote is strictly newer — apply fully
         if (Array.isArray(remote.tagGroups)) local.tagGroups = remote.tagGroups;
         if (Array.isArray(remote.tags))      local.tags      = remote.tags;
         if (Array.isArray(remote.projects))  local.projects  = remote.projects;
         local.configUpdatedAt = remote.updatedAt;
         this.setConfig(local);
+      } else {
+        // Timestamps equal or remote older — merge additions only
+        // (picks up CLI-added items that didn't bump updatedAt)
+        let changed = false;
+        if (Array.isArray(remote.tagGroups)) {
+          const localIds = new Set((local.tagGroups || []).map(g => g.id));
+          const added = remote.tagGroups.filter(g => !localIds.has(g.id));
+          if (added.length) { local.tagGroups = [...(local.tagGroups || []), ...added]; changed = true; }
+        }
+        if (Array.isArray(remote.tags)) {
+          const localIds = new Set((local.tags || []).map(t => t.id));
+          const added = remote.tags.filter(t => !localIds.has(t.id));
+          if (added.length) { local.tags = [...(local.tags || []), ...added]; changed = true; }
+        }
+        if (Array.isArray(remote.projects)) {
+          const localIds = new Set((local.projects || []).map(p => p.id));
+          const added = remote.projects.filter(p => !localIds.has(p.id));
+          if (added.length) { local.projects = [...(local.projects || []), ...added]; changed = true; }
+        }
+        if (changed) this.setConfig(local);
       }
     } catch (e) {
       console.warn('Could not pull config:', e.message);
@@ -307,6 +335,9 @@ class Storage {
     try {
       // First, ensure data structure exists
       await this.github.ensureDataStructure();
+
+      // Always pull config so CLI/external changes are reflected immediately
+      await this.pullConfig();
 
       // Process sync queue
       const errors = [];

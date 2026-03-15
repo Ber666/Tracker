@@ -1501,7 +1501,7 @@ body {
   border-left-color: var(--color-done);
 }
 
-.timeline-task.done .timeline-task-text {
+.timeline-task.done:not(.actual-side) .timeline-task-text {
   text-decoration: line-through;
 }
 

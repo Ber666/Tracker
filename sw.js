@@ -2,7 +2,7 @@
 // Service Worker for Offline Support
 // ========================================
 
-const CACHE_NAME = 'tracker-v75';
+const CACHE_NAME = 'tracker-v79';
 const ASSETS = [
   '/',
   '/index.html',

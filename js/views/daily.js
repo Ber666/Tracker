@@ -9,7 +9,7 @@ const DailyView = {
   editingTaskType: null,
   currentTaskView: 'list',
   draggedTask: null,
-  timelineStartHour: 6,
+  timelineStartHour: 0,
   timelineEndHour: 23,
   editors: {},
   _drawCleanup: null,
@@ -1183,6 +1183,13 @@ const DailyView = {
     // Setup drag and drop + draw-to-create
     this.setupTimelineDragDrop();
     this.setupTimelineDraw();
+
+    // Scroll to 9am on initial render (run after paint so offsetTop is available)
+    requestAnimationFrame(() => {
+      const nineAm = gridContainer.querySelector('.timeline-hour[data-hour="9"]');
+      const col = document.querySelector('.daily-col-left');
+      if (nineAm && col) col.scrollTop = nineAm.offsetTop;
+    });
   },
 
   renderTimelineTask(task, type, scheduled, minutes = 0) {
