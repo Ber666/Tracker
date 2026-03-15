@@ -3,22 +3,20 @@ import { today, isDateKey, genId, ok, fail } from '../utils.js';
 
 function dateKey(flags) { return flags.date || today(); }
 
-function resolveTagIds(tagNames, cfg) {
-  if (!tagNames) return [];
+function resolveTagIds(tagIds, cfg) {
+  if (!tagIds) return [];
   const tags = cfg.tags || [];
-  return tagNames.split(',').map(s => s.trim()).filter(Boolean).map(name => {
-    const tag = tags.find(t => t.name.toLowerCase() === name.toLowerCase());
-    if (!tag) throw new Error(`Tag not found: "${name}". Run: tracker tag list`);
-    return tag.id;
+  return tagIds.split(',').map(s => s.trim()).filter(Boolean).map(id => {
+    if (!tags.find(t => t.id === id)) throw new Error(`Tag ID not found: "${id}". Run: tracker tag list`);
+    return id;
   });
 }
 
-function resolveProjectId(projectArg, cfg) {
-  if (!projectArg) return null;
-  const projects = cfg.projects || [];
-  const p = projects.find(p => p.id === projectArg || p.name.toLowerCase() === projectArg.toLowerCase());
-  if (!p) throw new Error(`Project not found: "${projectArg}". Run: tracker project list`);
-  return p.id;
+function resolveProjectId(projectId, cfg) {
+  if (!projectId) return null;
+  if (!(cfg.projects || []).find(p => p.id === projectId))
+    throw new Error(`Project ID not found: "${projectId}". Run: tracker project list`);
+  return projectId;
 }
 
 function findTasks(tasks, ref) {
@@ -37,7 +35,7 @@ export async function run({ subcmd, args, flags }) {
   switch (subcmd) {
     case 'add': {
       const text = args[0];
-      if (!text) fail('Usage: tracker task add <text> [--time HH:MM] [--duration Xh] [--project name] [--tags t1,t2]');
+      if (!text) fail('Usage: tracker task add <text> [--time HH:MM] [--duration Xh] [--project <id>] [--tags <id1,id2>]');
       const projectId = resolveProjectId(flags.project, cfg);
       const task = {
         id: genId(),

@@ -112,12 +112,12 @@ Output (`data`):
 Manage planned tasks.
 
 ```bash
-# Add a task
+# Add a task (--tags and --project take IDs — get them from tracker tag list / tracker project list)
 tracker task add "Write thesis intro" \
   --time 09:00 \
   --duration 2h \
-  --project proj-abc \
-  --tags work \
+  --project tmmqzxn2s5kepu \
+  --tags mmr2no961fq7x58dl9t \
   --date 2026-03-14       # default: today
 
 # List tasks
@@ -170,9 +170,9 @@ tracker log add "Advisor meeting" \
   --time 14:30 \
   --duration 45m \
   --notes "Discussed chapter 3 feedback" \
-  --tags work \
-  --project proj-abc \
-  --planned t1abc123 \    # link to one or more planned tasks
+  --tags mmr2no961fq7x58dl9t \
+  --project tmmqzxn2s5kepu \
+  --planned t1abc123 \    # link to one or more planned tasks (IDs)
   --date 2026-03-14       # default: today
 
 # Multiple planned links
