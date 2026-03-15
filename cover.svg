@@ -26,7 +26,7 @@
   <text x="100" y="310" font-family="Inter, -apple-system, sans-serif" font-size="22" fill="#3A5478">Plan · Log · Reflect</text>
 
   <!-- Tagline -->
-  <text x="100" y="356" font-family="Inter, -apple-system, sans-serif" font-size="16" fill="#7A9AB2">For PhD students (and anyone) who wonder where the day went.</text>
+  <text x="100" y="356" font-family="Inter, -apple-system, sans-serif" font-size="16" fill="#7A9AB2">Log from anywhere — browser, terminal, or via LLM agent.</text>
 
   <!-- Feature pills row -->
   <!-- Pill 1 -->
@@ -38,12 +38,12 @@
   <text x="342" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#C69214" text-anchor="middle">Google Calendar</text>
 
   <!-- Pill 3 -->
-  <rect x="448" y="410" width="136" height="32" rx="16" fill="#E8F8F3"/>
-  <text x="516" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#1BA87A" text-anchor="middle">iPhone PWA</text>
+  <rect x="448" y="410" width="152" height="32" rx="16" fill="#FFF0EC"/>
+  <text x="524" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#C8472A" text-anchor="middle">🦞 OpenClaw</text>
 
   <!-- Pill 4 -->
-  <rect x="596" y="410" width="180" height="32" rx="16" fill="#FFFFFF" opacity="0.7"/>
-  <text x="686" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#7A9AB2" text-anchor="middle">AI · coming soon</text>
+  <rect x="612" y="410" width="148" height="32" rx="16" fill="#F0F0FF"/>
+  <text x="686" y="431" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#5856D6" text-anchor="middle">CLI · agents</text>
 
   <!-- Right: decorative timeline illustration -->
   <!-- Vertical separator -->

@@ -4,16 +4,15 @@ I built this for myself as a PhD student who constantly wonders where the day we
 
 ## Features
 
-- **Daily View**: Two-column layout — timeline on the left, structured check-ins on the right
-  - **Morning Check-in**: Sleep/wake times + 4 morning ratings (Sleep Quality, Sharpness, Mood, Body), morning note
-  - **Vitals**: Naps, Exercise, Meals, Drinks & Snacks, free-form notes — auto-populated from timeline events by tag group
-  - **Night Check-in**: 4 evening ratings (Focus, Social, Mood, Body), night note
-- **Stats View**: Charts across the last 7 / 30 / 90 days — sleep duration, task completion, all 8 ratings, exercise activity, drinks log. Summary cards include avg sleep (mean ± std), bed time (mean ± std), night mood, night focus, exercise days, task completion rate.
-- **Projects View**: Create and manage projects with name, color, and description. See per-project task counts, completion rate, and recent task history across the last 90 days.
-- **GitHub Sync**: Data stored in a private GitHub repo, synced on demand
-- **Google Calendar Import**: Import today's events as planned tasks (optional)
-- **Timeline**: Visual task timeline with drag-to-schedule support
-- **Cross-device**: Works on Mac (browser) and iPhone (PWA, full offline support)
+**Plan & log your day** — every day starts with a planned task list on a visual timeline. As the day unfolds, you log what actually happened: unplanned meetings, rabbit holes, anything. The side-by-side view makes it easy to see the gap between intention and reality, which is usually where the day went.
+
+**Check-ins & vitals** — morning check-in records sleep times and 4 ratings (sleep quality, sharpness, mood, body energy) so you can spot patterns in how you feel vs. how you perform. Evening check-in captures focus, social, mood, and physical state. The Vitals panel auto-populates meals, exercise, naps, and drinks from tagged tasks — no double-entry.
+
+**CLI + agent integration** — a JSON-output CLI lets you log anything from the terminal. OpenClaw can use that to handle check-ins and log updates conversationally — e.g., send a WhatsApp message like "just finished a 45-min gym session" and it calls `tracker log add` in the background, or set OpenClaw to check in your progress every hour and automatically update the log.
+
+**Data on GitHub** — all entries are stored as JSON files in a private GitHub repo you own. No accounts, no subscriptions, no third-party servers. Sync is on-demand via the web app or automatic via the CLI.
+
+**Also:** Stats view with sleep / task / rating charts across 7 / 30 / 90 days. Projects view with per-project completion tracking. Google Calendar import for planned tasks.
 
 ## Quick Start
 
@@ -34,33 +33,58 @@ I built this for myself as a PhD student who constantly wonders where the day we
 
 ```bash
 cd /path/to/Tracker
-
-# Python (built-in)
 python3 -m http.server 8080
 ```
 
 Then open [http://localhost:8080](http://localhost:8080), enter your GitHub token and repo details, and start tracking.
 
-## Access on iPhone
+## CLI
 
-Deploy the app so it's reachable over the internet, then install it as a PWA on your phone.
+The CLI lets you read and write all tracker data from the terminal. Every command outputs JSON, making it easy to script or wire up an LLM agent.
 
-**Option A: GitHub Pages**
-1. Push this repo to GitHub
-2. Go to Settings → Pages → Deploy from main branch
-3. Access via `https://yourusername.github.io/tracker/`
+### Setup
 
-**Option B: Vercel**
-1. Connect repo to [vercel.com](https://vercel.com)
-2. Deploy automatically
-3. Access via your Vercel URL
+```bash
+node cli/tracker.js config set --token ghp_... --repo username/my-journal-data
 
-**Install as PWA on iPhone**
-1. Open the deployed URL in Safari
-2. Tap Share → Add to Home Screen
-3. Name it "Tracker"
+# Optional: symlink for convenience
+ln -s $(pwd)/cli/tracker.js /usr/local/bin/tracker
+```
 
-The app works fully offline after the first load — changes sync to GitHub whenever you're back online.
+Requires Node.js 18+. No npm dependencies.
+
+### Usage
+
+```bash
+# Read today
+tracker day
+tracker day --human          # readable summary
+
+# Plan
+tracker task add "Write section 3.2" --time 14:00 --duration 2h --project Thesis --tags Writing
+tracker task list
+tracker task done "Write section" --notes "Draft done, needs revision"
+
+# Log what actually happened
+tracker log add "Unplanned advisor meeting" --time 11:00 --duration 45m --tags Meeting --project Thesis
+
+# Check-ins
+tracker sleep set --bed 23:30 --wake 07:45
+tracker checkin morning --quality 4 --clarity 3 --mood 4 --body 3 --note "Feeling good"
+tracker checkin night --focus 4 --social 3 --mood 4 --body 3
+
+# Browse
+tracker tag list
+tracker project list
+tracker project show Thesis
+tracker sync
+```
+
+All outputs are `{ "ok": true, "data": ... }` or `{ "ok": false, "error": "..." }` with exit code 1 on error.
+
+## Agent Integration
+
+Once the CLI is set up, you can chat with OpenClaw to operate the tracker on your phone, without openning the website.
 
 ## Google Calendar Import
 
@@ -70,23 +94,22 @@ The app works fully offline after the first load — changes sync to GitHub when
 2. Create a project → **APIs & Services → Enable APIs** → enable **Google Calendar API**
 3. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
    - Application type: **Web application**
-   - Authorized JavaScript origins: add your app URL (e.g. `http://localhost:8080` or your deployed URL)
-   - Leave redirect URIs empty
+   - Authorized JavaScript origins: add your app URL (e.g. `http://localhost:8080`)
 4. Copy the **Client ID** (ends in `.apps.googleusercontent.com`)
 5. In Tracker → **Settings** → paste it into **Google Client ID** → Save
 
 **Importing events**
 
-1. Navigate to the day you want to import events for
-2. Click **↕ Import** next to the Planned tasks section
+1. Navigate to the day you want to import
+2. Click **↕ Import** next to Planned tasks
 3. On first use, click **Connect Google Calendar** and sign in
-4. Events for the current day load automatically — check which to import → **Import Selected**
+4. Select events → **Import Selected**
 
-Re-importing the same event updates its calendar fields while preserving any notes you've added.
+Re-importing the same event updates calendar fields while preserving any notes you've added.
 
 ## Tag Groups
 
-Tag groups categorize tasks so the app can auto-populate the Vitals sections in the Daily view. Manage them in **Settings → Tags**.
+Tag groups categorize tasks so the app can auto-populate the Vitals sections. Manage them in **Settings → Tags**.
 
 On first launch, three groups are seeded automatically:
 
@@ -96,34 +119,35 @@ On first launch, three groups are seeded automatically:
 | **Exercise** | Auto-fills Exercise module | Gym, Run, Walk, Swim, Bike, Yoga |
 | **Misc** | Misc tags (Nap auto-fills Naps module) | Nap |
 
-Any task tagged with a group's tag will appear in the corresponding Vitals module, with its notes shown inline.
-
 ## File Structure
 
 ```
 Tracker/
-├── index.html              # Main app
-├── css/style.css           # Styles
+├── index.html
+├── css/style.css
 ├── js/
-│   ├── app.js              # Main controller
-│   ├── github.js           # GitHub API wrapper
-│   ├── storage.js          # localStorage + sync
-│   ├── utils.js            # Helpers
-│   ├── markdown-editor.js  # Markdown editor component
+│   ├── app.js
+│   ├── github.js
+│   ├── storage.js
+│   ├── utils.js
+│   ├── markdown-editor.js
 │   └── views/
-│       ├── daily.js        # Daily view
-│       ├── stats.js        # Stats view (charts)
-│       └── projects.js     # Projects view
-├── sw.js                   # Service worker (offline)
-├── manifest.json           # PWA manifest
-├── icons/                  # App icons
-├── DESIGN.md               # Design document
-└── README.md               # This file
+│       ├── daily.js
+│       ├── stats.js
+│       └── projects.js
+├── cli/
+│   ├── tracker.js          # entry point (chmod +x)
+│   ├── github.js           # GitHub API (Node.js)
+│   ├── storage.js          # read/write month files
+│   ├── config.js           # ~/.tracker-cli.json
+│   ├── utils.js
+│   └── commands/           # one file per command
+├── sw.js
+├── manifest.json
+└── icons/
 ```
 
 ## Data Storage
-
-Your data is stored in your private GitHub repo:
 
 ```
 data/
@@ -131,7 +155,7 @@ data/
 │   ├── 01.json         # January daily entries
 │   ├── 02.json         # February daily entries
 │   └── ...
-└── config.json         # App config (tag groups, projects, Google Client ID)
+└── config.json         # tag groups, projects, Google Client ID
 ```
 
 ## Data Schema
@@ -173,41 +197,27 @@ data/
     "wakeTime": "07:30",
     "naps": [{ "id": "n1", "time": "13:00", "duration": "25m" }]
   },
-  "morning": {
-    "quality": 4,
-    "clarity": 3,
-    "mood": 4,
-    "fatigue": 3
-  },
-  "night": {
-    "focus": 4,
-    "social": 3,
-    "mood": 4,
-    "body": 3
-  },
+  "morning": { "quality": 4, "clarity": 3, "mood": 4, "fatigue": 3 },
+  "night":   { "focus": 4, "social": 3, "mood": 4, "body": 3 },
   "morningMessage": "Ready for a productive day.",
   "nightMessage": "Good but tiring day.",
   "meals": [
     { "id": "m1", "name": "Oatmeal", "time": "08:00", "type": "meal" },
     { "id": "d1", "name": "Coffee", "type": "drink" }
   ],
-  "exercise": [
-    { "id": "e1", "time": "07:00", "name": "Gym", "duration": "45m" }
-  ],
   "dayNotes": "Free-form markdown notes for the day."
 }
 ```
 
 **Planned tasks** are added in the morning with an optional scheduled time and duration. Status tracks progress throughout the day.
-**Log tasks** are ad-hoc entries added as things happen.
+**Log tasks** are ad-hoc entries added as things happen, optionally linked to planned tasks via `plannedIds`.
 **morning / night** ratings are 1–5 integers (higher = better for all fields).
 **meals** stores both food and drink items, distinguished by `type: "meal" | "drink"`.
-**exercise** stores manually added exercise sessions; tag-based auto-pull also shows exercise-tagged tasks inline.
 
 ## Security
 
 - Data stored in your private GitHub repo
-- GitHub token stored in browser localStorage (never sent elsewhere)
+- GitHub token stored in browser localStorage / `~/.tracker-cli.json` (never sent elsewhere)
 - All sync over HTTPS
 - No backend server
 
