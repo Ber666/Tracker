@@ -358,13 +358,13 @@ const App = {
         <div class="tag-group-section" data-group-id="${group.id}">
           <div class="tag-group-header">
             <span class="ref-data-swatch" style="background:${group.color}"></span>
-            <span class="tag-group-name">${this.escapeHtml(group.name)}</span>
+            <input type="text" class="tag-group-name-input" data-id="${group.id}" value="${this.escapeHtml(group.name)}" title="Click to rename group">
             <button class="ref-data-delete tag-group-delete" data-id="${group.id}" title="Delete group">×</button>
           </div>
           <div class="tag-group-tags">
             ${groupTags.map(t => `
               <span class="tag-chip-item">
-                ${this.escapeHtml(t.name)}
+                <input type="text" class="tag-chip-name-input" data-id="${t.id}" value="${this.escapeHtml(t.name)}" title="Click to rename tag">
                 <button class="tag-chip-delete" data-id="${t.id}" title="Remove">×</button>
               </span>`).join('')}
             <span class="tag-group-add-inline">
@@ -375,6 +375,18 @@ const App = {
         </div>`;
     }).join('');
 
+    // Rename group
+    container.querySelectorAll('.tag-group-name-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const name = input.value.trim();
+        if (!name) { input.value = input.defaultValue; return; }
+        const groups = storage.getTagGroups();
+        const group = groups.find(g => g.id === input.dataset.id);
+        if (group) { group.name = name; storage.setTagGroups(groups); }
+      });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+    });
+
     // Delete group
     container.querySelectorAll('.tag-group-delete').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -383,6 +395,18 @@ const App = {
         storage.setTags(storage.getTags().filter(t => t.groupId !== id));
         this.renderTagGroups();
       });
+    });
+
+    // Rename tag
+    container.querySelectorAll('.tag-chip-name-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const name = input.value.trim();
+        if (!name) { input.value = input.defaultValue; return; }
+        const tags = storage.getTags();
+        const tag = tags.find(t => t.id === input.dataset.id);
+        if (tag) { tag.name = name; storage.setTags(tags); }
+      });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
     });
 
     // Delete tag
@@ -418,6 +442,8 @@ const App = {
         name: 'Misc', color: '#7B8CDE',
         tags: ['Nap'],
       },
+      { name: 'Drinks', color: '#5B9BD5', tags: ['Coffee', 'Tea', 'Water', 'Juice', 'Alcohol'] },
+      { name: 'Snacks', color: '#F0A500', tags: ['Snack'] },
     ];
 
     const groups = storage.getTagGroups();

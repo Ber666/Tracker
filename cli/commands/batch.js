@@ -64,8 +64,13 @@ function applyOp(op, entry, cfg) {
   if (cmd === 'sleep') {
     if (op.bed)  entry.sleep = { ...(entry.sleep || {}), bedTime:  op.bed  };
     if (op.wake) entry.sleep = { ...(entry.sleep || {}), wakeTime: op.wake };
-    if (op.nap)  entry.sleep = { ...(entry.sleep || {}), nap:      op.nap  };
-    return entry.sleep;
+    if (op.nap) {
+      if (!entry.vitals) entry.vitals = {};
+      if (!entry.vitals.naps) entry.vitals.naps = [];
+      const nap = { id: genId(), time: op.nap.time, duration: op.nap.duration, content: op.nap.duration };
+      entry.vitals.naps.push(nap);
+    }
+    return { sleep: entry.sleep, nap: op.nap ? entry.vitals.naps.at(-1) : undefined };
   }
 
   if (cmd === 'checkin') {

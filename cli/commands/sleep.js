@@ -33,9 +33,10 @@ export async function run({ subcmd, args, flags }) {
 
     case 'nap': {
       if (!flags.time || !flags.duration) fail('Usage: tracker sleep nap --time HH:MM --duration Xm');
-      if (!entry.sleep.naps) entry.sleep.naps = [];
-      const nap = { id: genId(), time: flags.time, duration: flags.duration };
-      entry.sleep.naps.push(nap);
+      if (!entry.vitals) entry.vitals = {};
+      if (!entry.vitals.naps) entry.vitals.naps = [];
+      const nap = { id: genId(), time: flags.time, duration: flags.duration, content: flags.duration };
+      entry.vitals.naps.push(nap);
       await setEntry(dk, entry);
       ok(nap);
       break;

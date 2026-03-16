@@ -887,6 +887,36 @@ body {
   font-size: 13px;
   font-weight: 600;
 }
+.tag-group-name-input {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  padding: 0;
+  min-width: 0;
+}
+.tag-group-name-input:focus {
+  border-bottom: 1px solid var(--color-border);
+}
+.tag-chip-name-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 0;
+  width: auto;
+  min-width: 20px;
+  max-width: 120px;
+}
+.tag-chip-name-input:focus {
+  border-bottom: 1px solid var(--color-border);
+}
 .tag-group-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1804,6 +1834,65 @@ body {
 .day-item:hover .day-item-delete { opacity: 1; }
 .day-item-delete:hover { color: var(--color-danger); }
 
+/* Vital items */
+.vital-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 3px 0;
+  font-size: var(--font-size-sm);
+}
+.vital-item:hover .vital-item-delete { opacity: 1; }
+.vital-linked {
+  font-size: 11px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.vital-type-label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.vital-content-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-family: inherit;
+  padding: 0;
+  min-width: 0;
+}
+.vital-time-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  padding: 0;
+  width: 3.5em;
+  flex-shrink: 0;
+}
+.vital-time-input:focus { border-bottom: 1px solid var(--color-border); }
+.vital-time-input::placeholder { color: var(--color-text-tertiary); }
+.vital-content-input::placeholder { color: var(--color-text-tertiary); }
+.vital-content-input:focus { color: var(--color-text); }
+.vital-item-delete {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  padding: 0 2px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.vital-item-delete:hover { color: var(--color-danger); }
+
 .day-add-form {
   display: flex;
   align-items: center;
@@ -1917,8 +2006,27 @@ body {
 .checkin-nap      { border-left-color: #7B8CDE; }
 .checkin-exercise { border-left-color: #E8654A; }
 .checkin-meals    { border-left-color: #56B870; }
-.checkin-drinks   { border-left-color: #E8A838; }
+.checkin-drinks-snacks { border-left-color: #E8A838; }
 .checkin-notes    { border-left-color: #A78BFA; }
+
+.checkin-subsection { margin-bottom: var(--space-sm); }
+.checkin-sublabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+.checkin-sublabel .btn-link {
+  margin-left: auto;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
 
 .checkin-module-title {
   display: flex;
@@ -1950,6 +2058,7 @@ body {
   font-size: var(--font-size-xs, 11px);
   margin-left: 4px;
 }
+
 
 @media (max-width: 600px) {
   .sleep-grid {

@@ -115,10 +115,15 @@ const DailyView = {
     document.getElementById('meal-add-cancel').addEventListener('click', () => this.hideDayAddForm('meal'));
     document.getElementById('meal-add-save').addEventListener('click', () => this.addMeal());
 
-    // Drinks & Snacks
+    // Drinks
     document.getElementById('add-drink-btn').addEventListener('click', () => this.showDayAddForm('drink'));
     document.getElementById('drink-add-cancel').addEventListener('click', () => this.hideDayAddForm('drink'));
     document.getElementById('drink-add-save').addEventListener('click', () => this.addDrink());
+
+    // Snacks
+    document.getElementById('add-snack-btn').addEventListener('click', () => this.showDayAddForm('snack'));
+    document.getElementById('snack-add-cancel').addEventListener('click', () => this.hideDayAddForm('snack'));
+    document.getElementById('snack-add-save').addEventListener('click', () => this.addSnack());
 
     // Auto-save on input changes (morning message + sleep fields + day notes)
     const autoSaveInputs = ['morning-message', 'bed-time', 'wake-time'];
@@ -243,17 +248,181 @@ const DailyView = {
     // Load entry
     this.currentEntry = storage.getDayEntry(dateKey);
 
+    if (this.syncVitalsFromLog(this.currentEntry)) {
+      storage.setDayEntry(Utils.formatDateKey(date), this.currentEntry);
+    }
+
     // Render all sections
     this.renderTasks();
     this.renderTimeline();
     this.renderMorningMessage();
     this.renderSleep();
-    this.renderNaps();
-    this.renderExercise();
-    this.renderMeals();
-    this.renderDrinks();
+    this.renderVitals();
     this.renderDayNotes();
     this.renderNotes();
+  },
+
+  syncVitalsFromLog(entry) {
+    const now = new Date().toISOString();
+    const wasEmpty = !entry.vitals;
+
+    // Ensure vitals and all 5 arrays exist
+    if (!entry.vitals) entry.vitals = {};
+    if (!entry.vitals.meals)    entry.vitals.meals    = [];
+    if (!entry.vitals.drinks)   entry.vitals.drinks   = [];
+    if (!entry.vitals.snacks)   entry.vitals.snacks   = [];
+    if (!entry.vitals.exercise) entry.vitals.exercise = [];
+    if (!entry.vitals.naps)     entry.vitals.naps     = [];
+
+    let changed = wasEmpty;
+
+    // One-time migration from old schema (only if vitals was just initialized)
+    if (wasEmpty) {
+      // Migrate entry.meals[] — type=meal → vitals.meals, type=drink → vitals.drinks
+      (entry.meals || []).forEach(m => {
+        if (m.type === 'meal') {
+          entry.vitals.meals.push({
+            id: Utils.generateId(),
+            time: m.time || '',
+            mealType: m.name || '',
+            content: '',
+            logId: null,
+            createdAt: m.createdAt || now,
+          });
+        } else if (m.type === 'drink') {
+          entry.vitals.drinks.push({
+            id: Utils.generateId(),
+            time: m.time || '',
+            drinkType: m.name || '',
+            content: '',
+            logId: null,
+            createdAt: m.createdAt || now,
+          });
+        }
+      });
+
+      // Migrate entry.exercise[]
+      (entry.exercise || []).forEach(e => {
+        entry.vitals.exercise.push({
+          id: Utils.generateId(),
+          time: e.time || '',
+          type: e.name || '',
+          duration: e.duration || '',
+          notes: '',
+          logId: null,
+          createdAt: e.createdAt || now,
+        });
+      });
+
+      // Migrate entry.sleep?.naps[]
+      (entry.sleep?.naps || []).forEach(n => {
+        entry.vitals.naps.push({
+          id: Utils.generateId(),
+          time: n.time || '',
+          duration: n.duration || '',
+          logId: null,
+          createdAt: n.createdAt || now,
+        });
+      });
+    }
+
+    // Look up tag groups for syncing from log
+    const tagGroups = storage.getTagGroups();
+    const allTags = storage.getTags();
+
+    const mealGroup = tagGroups.find(g => g.name.toLowerCase() === 'meal');
+    const mealTagIds = mealGroup ? allTags.filter(t => t.groupId === mealGroup.id).map(t => t.id) : [];
+    const mealTagById = Object.fromEntries(allTags.filter(t => mealTagIds.includes(t.id)).map(t => [t.id, t]));
+
+    const drinksGroup = tagGroups.find(g => g.name.toLowerCase() === 'drinks');
+    const drinksTagIds = drinksGroup ? allTags.filter(t => t.groupId === drinksGroup.id).map(t => t.id) : [];
+    const drinksTagById = Object.fromEntries(allTags.filter(t => drinksTagIds.includes(t.id)).map(t => [t.id, t]));
+
+    const snacksGroup = tagGroups.find(g => g.name.toLowerCase() === 'snacks');
+    const snacksTagIds = snacksGroup ? allTags.filter(t => t.groupId === snacksGroup.id).map(t => t.id) : [];
+
+    const exGroup = tagGroups.find(g => g.name.toLowerCase() === 'exercise');
+    const exTagIds = exGroup
+      ? allTags.filter(t => t.groupId === exGroup.id).map(t => t.id)
+      : allTags.filter(t => ['gym','run','swim','bike','sport','exercise','badminton','yoga'].includes(t.name.toLowerCase())).map(t => t.id);
+    const exTagById = Object.fromEntries(allTags.filter(t => exTagIds.includes(t.id)).map(t => [t.id, t]));
+
+    const napTagIds = allTags.filter(t => t.name.toLowerCase().includes('nap')).map(t => t.id);
+
+    // Sync from log entries
+    (entry.log || []).forEach(log => {
+      const tagIds = log.tagIds || [];
+
+      // Meals
+      const mealTagId = tagIds.find(id => mealTagIds.includes(id));
+      if (mealTagId) {
+        const tagName = mealTagById[mealTagId]?.name || '';
+        const existing = entry.vitals.meals.find(v => v.logId === log.id);
+        if (!existing) {
+          entry.vitals.meals.push({ id: Utils.generateId(), time: log.startTime || '', mealType: tagName, content: '', logId: log.id, createdAt: now });
+          changed = true;
+        } else if (existing.mealType !== tagName) {
+          existing.mealType = tagName;
+          changed = true;
+        }
+      }
+
+      // Drinks
+      const drinkTagId = tagIds.find(id => drinksTagIds.includes(id));
+      if (drinkTagId) {
+        const tagName = drinksTagById[drinkTagId]?.name || '';
+        const existing = entry.vitals.drinks.find(v => v.logId === log.id);
+        if (!existing) {
+          entry.vitals.drinks.push({ id: Utils.generateId(), time: log.startTime || '', drinkType: tagName, content: '', logId: log.id, createdAt: now });
+          changed = true;
+        } else if (existing.drinkType !== tagName) {
+          existing.drinkType = tagName;
+          changed = true;
+        }
+      }
+
+      // Snacks
+      const snackTagId = tagIds.find(id => snacksTagIds.includes(id));
+      if (snackTagId && !entry.vitals.snacks.some(v => v.logId === log.id)) {
+        entry.vitals.snacks.push({
+          id: Utils.generateId(),
+          time: log.startTime || '',
+          content: '',
+          logId: log.id,
+          createdAt: now,
+        });
+        changed = true;
+      }
+
+      // Exercise
+      const exTagId = tagIds.find(id => exTagIds.includes(id));
+      if (exTagId) {
+        const tagName = exTagById[exTagId]?.name || '';
+        const existing = entry.vitals.exercise.find(v => v.logId === log.id);
+        if (!existing) {
+          entry.vitals.exercise.push({ id: Utils.generateId(), time: log.startTime || '', type: tagName, duration: log.duration || '', notes: '', logId: log.id, createdAt: now });
+          changed = true;
+        } else if (existing.type !== tagName) {
+          existing.type = tagName;
+          changed = true;
+        }
+      }
+
+      // Naps
+      const napTagId = tagIds.find(id => napTagIds.includes(id));
+      if (napTagId && !entry.vitals.naps.some(v => v.logId === log.id)) {
+        entry.vitals.naps.push({
+          id: Utils.generateId(),
+          time: log.startTime || '',
+          duration: log.duration || '',
+          logId: log.id,
+          createdAt: now,
+        });
+        changed = true;
+      }
+    });
+
+    return changed;
   },
 
   renderTasks() {
@@ -508,48 +677,7 @@ const DailyView = {
   },
 
   renderNaps() {
-    const naps = this.currentEntry.sleep?.naps || [];
-    const container = document.getElementById('nap-list');
-
-    // Auto-pull nap-tagged tasks from planned + log
-    const tagGroups = storage.getTagGroups();
-    const allTags = storage.getTags();
-    const napGroup = tagGroups.find(g => g.name.toLowerCase() === 'self-care' || g.name.toLowerCase() === 'nap');
-    const napTagIds = napGroup
-      ? allTags.filter(t => t.groupId === napGroup.id && t.name.toLowerCase().includes('nap')).map(t => t.id)
-      : allTags.filter(t => t.name.toLowerCase().includes('nap')).map(t => t.id);
-
-    const autoNaps = [];
-    (this.currentEntry.log || []).forEach(task => {
-      if ((task.tagIds || []).some(id => napTagIds.includes(id))) {
-        autoNaps.push({
-          time: task.scheduledTime || task.startTime || '',
-          duration: task.duration || task.text || '',
-        });
-      }
-    });
-
-    let html = autoNaps.map(n => `
-      <div class="day-item meal-item-auto">
-        ${n.time ? `<span class="day-item-time">${n.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(n.duration)}</span>
-      </div>`).join('');
-
-    html += naps.map((n, i) => `
-      <div class="day-item">
-        ${n.time ? `<span class="day-item-time">${n.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(n.duration || '')}</span>
-        <button class="day-item-delete" data-index="${i}">×</button>
-      </div>`).join('');
-
-    container.innerHTML = html;
-    container.querySelectorAll('.day-item-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.currentEntry.sleep.naps.splice(parseInt(btn.dataset.index), 1);
-        this.saveEntry();
-        this.renderNaps();
-      });
-    });
+    this.renderVitalsList('naps', document.getElementById('nap-list'));
     this.updateSleepDuration();
   },
 
@@ -573,6 +701,8 @@ const DailyView = {
       document.getElementById('meal-name-input').value = '';
     } else if (type === 'drink') {
       document.getElementById('drink-name-input').value = '';
+    } else if (type === 'snack') {
+      document.getElementById('snack-name-input').value = '';
     }
   },
 
@@ -580,6 +710,11 @@ const DailyView = {
     const time = document.getElementById('nap-time-input').value;
     const duration = document.getElementById('nap-duration-input').value.trim();
     if (!time && !duration) return;
+    const now = new Date().toISOString();
+    if (!this.currentEntry.vitals) this.currentEntry.vitals = {};
+    if (!this.currentEntry.vitals.naps) this.currentEntry.vitals.naps = [];
+    this.currentEntry.vitals.naps.push({ id: Utils.generateId(), time, duration, logId: null, createdAt: now });
+    // Also keep old field for compat
     if (!this.currentEntry.sleep) this.currentEntry.sleep = {};
     if (!this.currentEntry.sleep.naps) this.currentEntry.sleep.naps = [];
     this.currentEntry.sleep.naps.push({ id: Utils.generateId(), time, duration });
@@ -590,47 +725,113 @@ const DailyView = {
   },
 
   renderExercise() {
-    const exercises = this.currentEntry.exercise || [];
-    const container = document.getElementById('exercise-list');
+    this.renderVitalsList('exercise', document.getElementById('exercise-list'));
+  },
 
-    // Auto-pull exercise-tagged tasks
-    const tagGroups = storage.getTagGroups();
-    const allTags = storage.getTags();
-    const exGroup = tagGroups.find(g => g.name.toLowerCase() === 'exercise');
-    const exTagIds = exGroup ? allTags.filter(t => t.groupId === exGroup.id).map(t => t.id)
-      : allTags.filter(t => ['gym','run','swim','bike','sport','exercise','badminton','yoga'].includes(t.name.toLowerCase())).map(t => t.id);
-    const exTagById = Object.fromEntries(allTags.filter(t => exTagIds.includes(t.id)).map(t => [t.id, t]));
+  renderMeals() {
+    this.renderVitalsList('meals', document.getElementById('meal-list'));
+  },
 
-    const autoEx = [];
-    (this.currentEntry.log || []).forEach(task => {
-      const matchedId = (task.tagIds || []).find(id => exTagIds.includes(id));
-      if (matchedId) autoEx.push({
-        name: task.text || exTagById[matchedId]?.name || '',
-        time: task.scheduledTime || task.startTime || '',
-        duration: task.duration || '',
-        note: task.notes || '',
-      });
-    });
+  renderDrinks() {
+    this.renderVitalsList('drinks', document.getElementById('drink-list'));
+  },
 
-    let html = autoEx.map(e => `
-      <div class="day-item meal-item-auto">
-        ${e.time ? `<span class="day-item-time">${e.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(e.name)}${e.duration ? ` · ${this.escapeHtml(e.duration)}` : ''}${e.note ? ` <span class="day-item-note">${this.escapeHtml(e.note)}</span>` : ''}</span>
-      </div>`).join('');
+  renderSnacks() {
+    this.renderVitalsList('snacks', document.getElementById('snack-list'));
+  },
 
-    html += exercises.map((e, i) => `
-      <div class="day-item">
-        ${e.time ? `<span class="day-item-time">${e.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(e.name)}${e.duration ? ` · ${this.escapeHtml(e.duration)}` : ''}</span>
-        <button class="day-item-delete" data-index="${i}">×</button>
-      </div>`).join('');
+  renderVitals() {
+    this.renderNaps();
+    this.renderExercise();
+    this.renderMeals();
+    this.renderDrinks();
+    this.renderSnacks();
+  },
+
+  renderVitalsList(vitalsKey, container) {
+    if (!container) return;
+    if (!this.currentEntry.vitals) this.currentEntry.vitals = {};
+    const items = this.currentEntry.vitals[vitalsKey] || [];
+
+    const html = items.map(item => {
+      let labelHtml = '';
+      let contentValue = '';
+      let contentPlaceholder = 'notes...';
+
+      if (vitalsKey === 'meals') {
+        labelHtml = item.mealType ? `<span class="vital-type-label">${this.escapeHtml(item.mealType)}</span>` : '';
+        contentValue = item.content || '';
+        contentPlaceholder = 'what?';
+      } else if (vitalsKey === 'drinks') {
+        labelHtml = item.drinkType ? `<span class="vital-type-label">${this.escapeHtml(item.drinkType)}</span>` : '';
+        contentValue = item.content || '';
+        contentPlaceholder = 'details...';
+      } else if (vitalsKey === 'snacks') {
+        contentValue = item.content || '';
+        contentPlaceholder = 'what?';
+      } else if (vitalsKey === 'exercise') {
+        labelHtml = item.type ? `<span class="vital-type-label">${this.escapeHtml(item.type)}</span>` : '';
+        if (item.duration) labelHtml += ` <span class="vital-type-label">${this.escapeHtml(item.duration)}</span>`;
+        contentValue = item.notes || '';
+        contentPlaceholder = 'notes...';
+      } else if (vitalsKey === 'naps') {
+        labelHtml = `<span class="vital-type-label">Nap</span>`;
+        contentValue = item.duration || '';
+        contentPlaceholder = 'duration (e.g. 20m)';
+      }
+
+      return `<div class="vital-item" data-vital-type="${vitalsKey}" data-vital-id="${item.id}">
+        ${item.logId ? '<span class="vital-linked" title="Linked to log entry">🔗</span>' : ''}
+        <input class="vital-time-input" placeholder="--:--" value="${this.escapeHtml(item.time || '')}">
+        ${labelHtml}
+        <input class="vital-content-input" placeholder="${contentPlaceholder}" value="${this.escapeHtml(contentValue)}">
+        <button class="vital-item-delete">×</button>
+      </div>`;
+    }).join('');
 
     container.innerHTML = html;
-    container.querySelectorAll('.day-item-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.currentEntry.exercise.splice(parseInt(btn.dataset.index), 1);
+
+    // Time inputs
+    container.querySelectorAll('.vital-time-input').forEach(input => {
+      const saveTime = () => {
+        const itemEl = input.closest('.vital-item');
+        const item = (this.currentEntry.vitals[vitalsKey] || []).find(i => i.id === itemEl.dataset.vitalId);
+        if (!item) return;
+        item.time = input.value.trim() || null;
         this.saveEntry();
-        this.renderExercise();
+      };
+      input.addEventListener('blur', saveTime);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveTime(); input.blur(); } });
+    });
+
+    // Event delegation for content input blur/enter
+    container.querySelectorAll('.vital-content-input').forEach(input => {
+      const saveInput = () => {
+        const itemEl = input.closest('.vital-item');
+        const itemId = itemEl.dataset.vitalId;
+        const item = (this.currentEntry.vitals[vitalsKey] || []).find(i => i.id === itemId);
+        if (!item) return;
+        if (vitalsKey === 'exercise') {
+          item.notes = input.value;
+        } else if (vitalsKey === 'naps') {
+          item.duration = input.value;
+        } else {
+          item.content = input.value;
+        }
+        this.saveEntry();
+      };
+      input.addEventListener('blur', saveInput);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveInput(); input.blur(); } });
+    });
+
+    // Delete buttons
+    container.querySelectorAll('.vital-item-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const itemEl = btn.closest('.vital-item');
+        const itemId = itemEl.dataset.vitalId;
+        this.currentEntry.vitals[vitalsKey] = (this.currentEntry.vitals[vitalsKey] || []).filter(i => i.id !== itemId);
+        this.saveEntry();
+        this.renderVitalsList(vitalsKey, container);
       });
     });
   },
@@ -640,6 +841,11 @@ const DailyView = {
     if (!name) return;
     const time = document.getElementById('exercise-time-input').value;
     const duration = document.getElementById('exercise-duration-input').value.trim();
+    const now = new Date().toISOString();
+    if (!this.currentEntry.vitals) this.currentEntry.vitals = {};
+    if (!this.currentEntry.vitals.exercise) this.currentEntry.vitals.exercise = [];
+    this.currentEntry.vitals.exercise.push({ id: Utils.generateId(), time, type: name, duration, notes: '', logId: null, createdAt: now });
+    // Also keep old field for compat
     if (!this.currentEntry.exercise) this.currentEntry.exercise = [];
     this.currentEntry.exercise.push({ id: Utils.generateId(), time, name, duration });
     this.saveEntry();
@@ -647,87 +853,14 @@ const DailyView = {
     this.renderExercise();
   },
 
-  renderMeals() {
-    const meals = (this.currentEntry.meals || []).filter(m => m.type !== 'drink');
-    const container = document.getElementById('meal-list');
-
-    // Collect meal-tagged tasks from planned + log
-    const tagGroups = storage.getTagGroups();
-    const allTags = storage.getTags();
-    const mealGroup = tagGroups.find(g => g.name.toLowerCase() === 'meal');
-    const mealTagIds = mealGroup ? allTags.filter(t => t.groupId === mealGroup.id).map(t => t.id) : [];
-    const mealTagById = Object.fromEntries(allTags.filter(t => mealTagIds.includes(t.id)).map(t => [t.id, t]));
-
-    const autoMeals = [];
-    (this.currentEntry.log || []).forEach(task => {
-      const matchedTagId = (task.tagIds || []).find(id => mealTagIds.includes(id));
-      if (matchedTagId) {
-        const tagName = mealTagById[matchedTagId]?.name || task.text || '';
-        autoMeals.push({
-          name: tagName,
-          time: task.scheduledTime || task.startTime || '',
-          note: task.notes || '',
-        });
-      }
-    });
-
-    let html = '';
-    autoMeals.forEach(m => {
-      html += `<div class="day-item meal-item-auto">
-        ${m.time ? `<span class="day-item-time">${m.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(m.name)}${m.note ? ` <span class="day-item-note">${this.escapeHtml(m.note)}</span>` : ''}</span>
-      </div>`;
-    });
-    meals.forEach((m, i) => {
-      html += `<div class="day-item">
-
-        ${m.time ? `<span class="day-item-time">${m.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(m.name)}</span>
-        <button class="day-item-delete" data-index="${i}">×</button>
-      </div>`;
-    });
-    container.innerHTML = html;
-
-    container.querySelectorAll('.day-item-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const allMeals = this.currentEntry.meals || [];
-        const nonDrinks = allMeals.filter(m => m.type !== 'drink');
-        nonDrinks.splice(parseInt(btn.dataset.index), 1);
-        this.currentEntry.meals = [...nonDrinks, ...allMeals.filter(m => m.type === 'drink')];
-        this.saveEntry();
-        this.renderMeals();
-      });
-    });
-  },
-
-  renderDrinks() {
-    const drinks = (this.currentEntry.meals || []).filter(m => m.type === 'drink');
-    const container = document.getElementById('drink-list');
-    container.innerHTML = drinks.map((m, i) => `
-      <div class="day-item">
-
-        ${m.time ? `<span class="day-item-time">${m.time}</span>` : ''}
-        <span class="day-item-text">${this.escapeHtml(m.name)}</span>
-        <button class="day-item-delete" data-index="${i}">×</button>
-      </div>`).join('');
-    container.querySelectorAll('.day-item-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const allMeals = this.currentEntry.meals || [];
-        const d = allMeals.filter(m => m.type === 'drink');
-        d.splice(parseInt(btn.dataset.index), 1);
-        this.currentEntry.meals = [...allMeals.filter(m => m.type !== 'drink'), ...d];
-        this.saveEntry();
-        this.renderDrinks();
-      });
-    });
-  },
-
   addMeal() {
     const name = document.getElementById('meal-name-input').value.trim();
     if (!name) return;
     const time = document.getElementById('meal-time-input').value;
-    if (!this.currentEntry.meals) this.currentEntry.meals = [];
-    this.currentEntry.meals.push({ id: Utils.generateId(), time, name, type: 'meal' });
+    const now = new Date().toISOString();
+    if (!this.currentEntry.vitals) this.currentEntry.vitals = {};
+    if (!this.currentEntry.vitals.meals) this.currentEntry.vitals.meals = [];
+    this.currentEntry.vitals.meals.push({ id: Utils.generateId(), time, mealType: '', content: name, logId: null, createdAt: now });
     this.saveEntry();
     this.hideDayAddForm('meal');
     this.renderMeals();
@@ -736,11 +869,25 @@ const DailyView = {
   addDrink() {
     const name = document.getElementById('drink-name-input').value.trim();
     if (!name) return;
-    if (!this.currentEntry.meals) this.currentEntry.meals = [];
-    this.currentEntry.meals.push({ id: Utils.generateId(), name, type: 'drink' });
+    const now = new Date().toISOString();
+    if (!this.currentEntry.vitals) this.currentEntry.vitals = {};
+    if (!this.currentEntry.vitals.drinks) this.currentEntry.vitals.drinks = [];
+    this.currentEntry.vitals.drinks.push({ id: Utils.generateId(), time: '', drinkType: '', content: name, logId: null, createdAt: now });
     this.saveEntry();
     this.hideDayAddForm('drink');
     this.renderDrinks();
+  },
+
+  addSnack() {
+    const name = document.getElementById('snack-name-input').value.trim();
+    if (!name) return;
+    const now = new Date().toISOString();
+    if (!this.currentEntry.vitals) this.currentEntry.vitals = {};
+    if (!this.currentEntry.vitals.snacks) this.currentEntry.vitals.snacks = [];
+    this.currentEntry.vitals.snacks.push({ id: Utils.generateId(), time: '', content: name, logId: null, createdAt: now });
+    this.saveEntry();
+    this.hideDayAddForm('snack');
+    this.renderSnacks();
   },
 
   renderDayNotes() {
@@ -1033,6 +1180,8 @@ const DailyView = {
     this.closeTaskModal();
     this.renderTasks();
     this.renderTimeline();
+    this.syncVitalsFromLog(this.currentEntry);
+    this.renderVitals();
   },
 
   async deleteTask() {

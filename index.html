@@ -243,15 +243,29 @@
                 </div>
 
                 <!-- Drinks & Snacks -->
-                <div class="checkin-module checkin-drinks">
-                  <div class="checkin-module-title">☕ Drinks & Snacks
-                    <button type="button" id="add-drink-btn" class="btn-link">+ Add</button>
+                <div class="checkin-module checkin-drinks-snacks">
+                  <div class="checkin-module-title">☕ Drinks &amp; Snacks</div>
+                  <div class="checkin-subsection">
+                    <div class="checkin-sublabel">Drinks
+                      <button type="button" id="add-drink-btn" class="btn-link">+ Add</button>
+                    </div>
+                    <div id="drink-list" class="day-item-list"></div>
+                    <div id="drink-add-form" class="day-add-form hidden">
+                      <input type="text" id="drink-name-input" placeholder="coffee, tea, water..." class="day-add-text">
+                      <button type="button" id="drink-add-save" class="btn btn-small">Add</button>
+                      <button type="button" id="drink-add-cancel" class="btn-link">Cancel</button>
+                    </div>
                   </div>
-                  <div id="drink-list" class="day-item-list"></div>
-                  <div id="drink-add-form" class="day-add-form hidden">
-                    <input type="text" id="drink-name-input" placeholder="what?" class="day-add-text">
-                    <button type="button" id="drink-add-save" class="btn btn-small">Add</button>
-                    <button type="button" id="drink-add-cancel" class="btn-link">Cancel</button>
+                  <div class="checkin-subsection">
+                    <div class="checkin-sublabel">Snacks
+                      <button type="button" id="add-snack-btn" class="btn-link">+ Add</button>
+                    </div>
+                    <div id="snack-list" class="day-item-list"></div>
+                    <div id="snack-add-form" class="day-add-form hidden">
+                      <input type="text" id="snack-name-input" placeholder="what?" class="day-add-text">
+                      <button type="button" id="snack-add-save" class="btn btn-small">Add</button>
+                      <button type="button" id="snack-add-cancel" class="btn-link">Cancel</button>
+                    </div>
                   </div>
                 </div>
 
