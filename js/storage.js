@@ -240,15 +240,29 @@ class Storage {
     return entry;
   }
 
-  // Save a day's entry
+  // Save a day's entry — only bumps updatedAt if content actually changed
   setDayEntry(dateKey, entry) {
     const monthKey = dateKey.substring(0, 7);
     const monthData = this.getMonthData(monthKey);
 
-    entry.updatedAt = new Date().toISOString();
-    monthData.entries[dateKey] = entry;
+    const existing = monthData.entries[dateKey];
+    const isDirty = !existing || this._contentChanged(existing, entry);
 
-    this.setMonthData(monthKey, monthData);
+    if (isDirty) {
+      entry.updatedAt = new Date().toISOString();
+      monthData.entries[dateKey] = entry;
+      this.setMonthData(monthKey, monthData);
+    } else {
+      // No real change — update local cache silently without queuing a sync
+      monthData.entries[dateKey] = entry;
+      this.setLocal(this.getMonthLocalKey(monthKey), monthData);
+    }
+  }
+
+  // Compare two entries ignoring updatedAt itself
+  _contentChanged(a, b) {
+    const strip = obj => { const { updatedAt, ...rest } = obj; return rest; };
+    return JSON.stringify(strip(a)) !== JSON.stringify(strip(b));
   }
 
   // ========================================
@@ -379,27 +393,53 @@ class Storage {
     }
   }
 
+  // Merge two day entries, preserving all log/planned items from both sides.
+  // The newer entry wins for scalar fields; arrays are union-merged by id.
+  _mergeEntries(local, remote) {
+    const localTime = new Date(local.updatedAt || 0).getTime();
+    const remoteTime = new Date(remote.updatedAt || 0).getTime();
+    const base = localTime >= remoteTime ? { ...local } : { ...remote };
+    const other = localTime >= remoteTime ? remote : local;
+
+    // Union-merge arrays by id so items added on either side are never lost
+    for (const field of ['log', 'planned']) {
+      const baseArr = base[field] || [];
+      const otherArr = other[field] || [];
+      const baseIds = new Set(baseArr.map(i => i.id));
+      const added = otherArr.filter(i => !baseIds.has(i.id));
+      if (added.length) base[field] = [...baseArr, ...added];
+    }
+
+    // Merge vitals arrays by id too
+    if (base.vitals || other.vitals) {
+      base.vitals = base.vitals || {};
+      const otherVitals = other.vitals || {};
+      for (const key of ['meals', 'drinks', 'snacks', 'exercise', 'naps']) {
+        const baseArr = base.vitals[key] || [];
+        const otherArr = otherVitals[key] || [];
+        const baseIds = new Set(baseArr.map(i => i.id));
+        const added = otherArr.filter(i => !baseIds.has(i.id));
+        if (added.length) base.vitals[key] = [...baseArr, ...added];
+      }
+    }
+
+    return base;
+  }
+
   async syncMonth(monthKey) {
     const localData = this.getMonthData(monthKey);
     const remoteData = await this.github.getMonthlyData(monthKey);
 
-    // Merge: for each entry, keep the one with later updatedAt
+    // Start with all remote entries, then merge in local
     const merged = { ...remoteData };
     merged.entries = { ...remoteData.entries };
 
     for (const [dateKey, localEntry] of Object.entries(localData.entries)) {
       const remoteEntry = remoteData.entries[dateKey];
-
       if (!remoteEntry) {
         merged.entries[dateKey] = localEntry;
       } else {
-        // Compare updatedAt timestamps
-        const localTime = new Date(localEntry.updatedAt || 0).getTime();
-        const remoteTime = new Date(remoteEntry.updatedAt || 0).getTime();
-
-        if (localTime >= remoteTime) {
-          merged.entries[dateKey] = localEntry;
-        }
+        merged.entries[dateKey] = this._mergeEntries(localEntry, remoteEntry);
       }
     }
 
@@ -440,9 +480,8 @@ class Storage {
     }
   }
 
-  // Pull remote before a write to avoid overwriting newer CLI/external changes.
-  // Merges all days in the month where remote is newer, except the day being written
-  // (whose content is the user's pending change — user always wins on their own edit).
+  // Pull remote before a write and merge into local (including the day being written).
+  // For the day being written: merge arrays by id so remote-only items are preserved.
   // Non-fatal: if offline or GitHub unavailable, write proceeds with local data.
   async pullBeforeWrite(dateKey) {
     if (!this.github) return;
@@ -455,24 +494,22 @@ class Storage {
       let changed = false;
 
       for (const [key, remoteEntry] of Object.entries(remoteData.entries)) {
-        if (key === dateKey) continue; // user is writing this day — skip
         const localEntry = localData.entries[key];
-        const remoteTime = new Date(remoteEntry.updatedAt || 0).getTime();
-        const localTime = new Date(localEntry?.updatedAt || 0).getTime();
-        if (remoteTime > localTime) {
+        if (!localEntry) {
           localData.entries[key] = remoteEntry;
           changed = true;
-        }
-      }
-
-      // Also check if current day in remote is newer than what we last loaded —
-      // if so, warn (but still let user's write proceed).
-      const remoteCurrentDay = remoteData.entries[dateKey];
-      if (remoteCurrentDay) {
-        const remoteTime = new Date(remoteCurrentDay.updatedAt || 0).getTime();
-        const localTime = new Date(localData.entries[dateKey]?.updatedAt || 0).getTime();
-        if (remoteTime > localTime) {
-          console.warn(`[Tracker] Remote has newer data for ${dateKey} — user write will overwrite it.`);
+        } else {
+          const merged = this._mergeEntries(localEntry, remoteEntry);
+          // Check if merge added anything
+          const mergedJson = JSON.stringify(merged);
+          if (mergedJson !== JSON.stringify(localEntry)) {
+            localData.entries[key] = merged;
+            // If this is the day being written, also update currentEntry in DailyView
+            if (key === dateKey && window.DailyView?.currentEntry) {
+              Object.assign(window.DailyView.currentEntry, merged);
+            }
+            changed = true;
+          }
         }
       }
 

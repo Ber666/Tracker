@@ -237,13 +237,21 @@ const DailyView = {
     this.loadDate(this.currentDate);
   },
 
-  loadDate(date) {
+  async loadDate(date) {
     this.currentDate = date;
     const dateKey = Utils.formatDateKey(date);
+    const monthKey = dateKey.substring(0, 7);
 
     // Update header
     document.getElementById('current-date').textContent = Utils.formatDateDisplay(date);
     document.getElementById('day-of-week').textContent = Utils.getDayOfWeek(date);
+
+    // Pull latest from GitHub before loading so we never operate on stale local data
+    try {
+      await storage.pull(monthKey);
+    } catch (e) {
+      // Offline or error — continue with local data
+    }
 
     // Load entry
     this.currentEntry = storage.getDayEntry(dateKey);
@@ -1324,6 +1332,9 @@ const DailyView = {
     scheduledPlanned.forEach(task => placeTask(task, 'planned', task.scheduledTime));
     scheduledActual.forEach(task => placeTask(task, 'log', task.startTime));
 
+    // Resolve overlapping log entries by splitting the actual column
+    this.resolveTimelineOverlaps(gridContainer, scheduledActual);
+
     // Add current time indicator
     this.updateCurrentTimeIndicator();
 
@@ -1339,6 +1350,52 @@ const DailyView = {
     });
   },
 
+  resolveTimelineOverlaps(gridContainer, tasks) {
+    // Build { node, startMin, endMin } for each scheduled actual task
+    const items = tasks.map(task => {
+      const [h, m] = task.startTime.split(':').map(Number);
+      const startMin = h * 60 + (m || 0);
+      const endMin = startMin + (Utils.parseDuration(task.duration) || 30);
+      const node = gridContainer.querySelector(`.timeline-task[data-task-id="${task.id}"]`);
+      return node ? { node, startMin, endMin } : null;
+    }).filter(Boolean);
+
+    if (items.length === 0) return;
+
+    // Sort by start time
+    items.sort((a, b) => a.startMin - b.startMin);
+
+    // Greedy column assignment
+    const colEnds = []; // end time of last item in each sub-column
+    items.forEach(item => {
+      let col = colEnds.findIndex(end => end <= item.startMin);
+      if (col === -1) col = colEnds.length;
+      colEnds[col] = item.endMin;
+      item.col = col;
+    });
+
+    // For each item, total concurrent columns = max col index among all that overlap with it + 1
+    items.forEach(item => {
+      item.totalCols = Math.max(...items
+        .filter(o => o.startMin < item.endMin && o.endMin > item.startMin)
+        .map(o => o.col)) + 1;
+    });
+
+    // Adjust left/right within the actual column (40%–100%)
+    const ACT_LEFT = 0.40;
+    const ACT_RIGHT = 1.00;
+    const actWidth = ACT_RIGHT - ACT_LEFT;
+
+    items.forEach(({ node, col, totalCols }) => {
+      if (totalCols <= 1) return;
+      const colW = actWidth / totalCols;
+      const l = (ACT_LEFT + col * colW) * 100;
+      const r = (1 - ACT_LEFT - (col + 1) * colW) * 100;
+      node.style.left = `${l}%`;
+      node.style.right = `${Math.max(0, r)}%`;
+    });
+  },
+
   renderTimelineTask(task, type, scheduled, minutes = 0) {
     const statusClass = type === 'planned' ? (task.status || 'not-started') : 'done';
     const doneClass = (type === 'planned' && task.status === 'done') || type === 'log' ? 'done' : '';
@@ -1350,17 +1407,21 @@ const DailyView = {
     const projects = storage.getProjects();
     const tags = storage.getTags();
     const tagGroups = storage.getTagGroups();
-    const projectBadges = (task.projectIds || []).map(id => {
-      const p = projects.find(x => x.id === id);
-      return p ? `<span class="task-project-badge" style="background:${p.color}20;color:${p.color};border-color:${p.color}40">${this.escapeHtml(p.name)}</span>` : '';
-    }).join('');
-    const tagBadges = (task.tagIds || []).map(id => {
-      const t = tags.find(x => x.id === id);
-      if (!t) return '';
-      const g = tagGroups.find(g => g.id === t.groupId);
-      const c = g ? g.color : '#888';
-      return `<span class="task-tag-badge" style="background:${c}18;color:${c}"># ${this.escapeHtml(t.name)}</span>`;
-    }).join('');
+    const allBadges = [
+      ...(task.projectIds || []).map(id => {
+        const p = projects.find(x => x.id === id);
+        return p ? `<span class="task-project-badge" style="background:${p.color}20;color:${p.color};border-color:${p.color}40">${this.escapeHtml(p.name)}</span>` : '';
+      }),
+      ...(task.tagIds || []).map(id => {
+        const t = tags.find(x => x.id === id);
+        if (!t) return '';
+        const g = tagGroups.find(g => g.id === t.groupId);
+        const c = g ? g.color : '#888';
+        return `<span class="task-tag-badge" style="background:${c}18;color:${c}"># ${this.escapeHtml(t.name)}</span>`;
+      }),
+    ].filter(Boolean);
+    const overflow = allBadges.length - 2;
+    const badgesHtml = allBadges.slice(0, 2).join('') + (overflow > 0 ? `<span class="task-badge-overflow">+${overflow}</span>` : '');
 
     return `
       <div class="timeline-task ${doneClass} ${scheduledClass} ${sideClass}"
@@ -1370,7 +1431,7 @@ const DailyView = {
         <div class="task-progress-indicator ${statusClass}"></div>
         ${timeStr ? `<span class="timeline-task-time">${timeStr}</span>` : ''}
         <span class="timeline-task-text">${this.escapeHtml(task.text)}</span>
-        ${projectBadges}${tagBadges}
+        ${badgesHtml}
         ${task.duration ? `<span class="timeline-task-duration">${task.duration}</span>` : ''}
         ${task.importedFrom === 'gcal' ? `<span class="task-gcal-badge" title="Imported from Google Calendar">Cal</span>` : ''}
       </div>
